@@ -1,0 +1,38 @@
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# node_modules
+node_modules/
+.npm/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
