@@ -1,9 +1,5 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
-// @ts-ignore
-import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   // TODO: Replace with your Firebase project configuration
@@ -15,6 +11,10 @@ const firebaseConfig = {
   appId: "1:1234567890:web:abcdef123456"
 };
 
+export const isFirebaseConfigured =
+  firebaseConfig.apiKey !== 'YOUR_API_KEY' &&
+  firebaseConfig.projectId !== 'jerry-app-demo';
+
 // 1. Initialize Firebase App (ensure single instance)
 let app;
 if (!getApps().length) {
@@ -23,20 +23,7 @@ if (!getApps().length) {
   app = getApp();
 }
 
-// 2. Initialize Firebase Auth with React Native AsyncStorage
-let auth;
-try {
-  // If multiple hot reloads happen, getAuth will return the initialized instance
-  auth = getAuth(app);
-} catch (e) {
-  // First time initialization
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
-}
-
-// 3. Initialize other services
+// Initialize only the services currently used by the app.
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-export { app, auth, db, storage };
+export { app, db };

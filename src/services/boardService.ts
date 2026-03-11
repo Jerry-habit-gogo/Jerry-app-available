@@ -1,8 +1,11 @@
 import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, doc, getDoc, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, isFirebaseConfigured } from './firebase';
 import { Post, Comment } from '../types';
+import { mockPosts, mockComments } from './mockData';
 
 const POSTS_COLLECTION = 'posts';
+let localPosts: Post[] = [...mockPosts];
+let localComments: Record<string, Comment[]> = { ...mockComments };
 
 // 1. Fetch posts by category
 export const fetchPostsByCategory = async (
@@ -10,6 +13,17 @@ export const fetchPostsByCategory = async (
     pageSize: number = 20,
     lastVisible?: QueryDocumentSnapshot<DocumentData>
 ) => {
+    if (!isFirebaseConfigured) {
+        const filteredPosts = category
+            ? localPosts.filter((post) => post.category === category)
+            : localPosts;
+
+        return {
+            posts: filteredPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, pageSize),
+            lastVisible: undefined,
+        };
+    }
+
     try {
         let q = collection(db, POSTS_COLLECTION);
 
@@ -52,6 +66,20 @@ export const fetchPostsByCategory = async (
 export const createPost = async (
     postData: Omit<Post, 'id' | 'createdAt' | 'viewCount' | 'commentCount' | 'likeCount'>
 ) => {
+    if (!isFirebaseConfigured) {
+        const newPost: Post = {
+            id: `local-post-${Date.now()}`,
+            ...postData,
+            createdAt: new Date().toISOString(),
+            viewCount: 0,
+            commentCount: 0,
+            likeCount: 0,
+        };
+
+        localPosts = [newPost, ...localPosts];
+        return newPost.id;
+    }
+
     try {
         const newPostRef = await addDoc(collection(db, POSTS_COLLECTION), {
             ...postData,
@@ -69,6 +97,12 @@ export const createPost = async (
 
 // 3. Fetch single post comments
 export const fetchPostComments = async (postId: string) => {
+    if (!isFirebaseConfigured) {
+        return (localComments[postId] || []).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+    }
+
     try {
         const commentsRef = collection(db, `${POSTS_COLLECTION}/${postId}/comments`);
         const q = query(commentsRef, orderBy('createdAt', 'asc'));
@@ -97,6 +131,25 @@ export const addComment = async (
     postId: string,
     commentData: Omit<Comment, 'id' | 'createdAt' | 'postId'>
 ) => {
+    if (!isFirebaseConfigured) {
+        const newComment: Comment = {
+            id: `local-comment-${Date.now()}`,
+            ...commentData,
+            postId,
+            createdAt: new Date().toISOString(),
+        };
+
+        localComments = {
+            ...localComments,
+            [postId]: [...(localComments[postId] || []), newComment],
+        };
+        localPosts = localPosts.map((post) =>
+            post.id === postId ? { ...post, commentCount: post.commentCount + 1 } : post
+        );
+
+        return newComment.id;
+    }
+
     try {
         const commentsRef = collection(db, `${POSTS_COLLECTION}/${postId}/comments`);
         const newCommentRef = await addDoc(commentsRef, {
