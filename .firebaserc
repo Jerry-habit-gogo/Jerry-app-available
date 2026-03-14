@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "y": "jerry-2001",
+    "npx firebase-tools deploy --only firestore,storage": "jerry-2001"
+  },
+  "targets": {},
+  "etags": {}
+}

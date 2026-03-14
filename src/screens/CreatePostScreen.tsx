@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TextInput,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Image,
+    ScrollView,
+    TouchableOpacity,
+    ActivityIndicator,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import ScreenContainer from '../components/ScreenContainer';
 import Button from '../components/Button';
-import { createPost } from '../services/boardService';
+import { createPost, uploadPostImages } from '../services/boardService';
 import { useUserStore } from '../store/userStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePost'>;
@@ -17,7 +30,41 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
     const [content, setContent] = useState('');
     const [category, setCategory] = useState(initialCategory);
     const [price, setPrice] = useState('');
+    const [region, setRegion] = useState('');
+    const [jobType, setJobType] = useState<'full_time' | 'part_time' | 'contract' | undefined>(undefined);
+    const [realEstateType, setRealEstateType] = useState<'studio' | 'apartment' | 'house' | undefined>(undefined);
+    const [marketplaceCondition, setMarketplaceCondition] = useState<'new' | 'used' | undefined>(undefined);
+    const [selectedImageUris, setSelectedImageUris] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPickingImage, setIsPickingImage] = useState(false);
+
+    const handlePickImages = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('알림', '사진 라이브러리 접근 권한이 필요합니다.');
+            return;
+        }
+
+        setIsPickingImage(true);
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'] as ImagePicker.MediaType[],
+                allowsMultipleSelection: true,
+                selectionLimit: 5,
+                quality: 0.8,
+            });
+
+            if (!result.canceled) {
+                setSelectedImageUris(result.assets.map((a) => a.uri));
+            }
+        } finally {
+            setIsPickingImage(false);
+        }
+    };
+
+    const handleRemoveImage = (uri: string) => {
+        setSelectedImageUris((prev) => prev.filter((u) => u !== uri));
+    };
 
     const handleSubmit = async () => {
         if (!title.trim() || !content.trim()) {
@@ -25,25 +72,51 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
             return;
         }
 
+        if (price) {
+            const parsedPrice = parseInt(price, 10);
+            if (isNaN(parsedPrice) || parsedPrice < 0) {
+                Alert.alert('알림', '올바른 가격을 입력해주세요.');
+                return;
+            }
+            if (parsedPrice > 99999999) {
+                Alert.alert('알림', '가격이 너무 큽니다.');
+                return;
+            }
+        }
+
         if (!user) {
-            Alert.alert('알림', '로그인이 필요합니다.');
+            Alert.alert('알림', '로그인이 필요합니다.', [
+                { text: '취소', style: 'cancel' },
+                { text: '로그인', onPress: () => navigation.navigate('Auth') },
+            ]);
             return;
         }
 
         setIsSubmitting(true);
         try {
+            // Upload images first, then attach download URLs to the post
+            let imageUrls: string[] = [];
+            if (selectedImageUris.length > 0) {
+                imageUrls = await uploadPostImages(user.id, selectedImageUris);
+            }
+
             await createPost({
                 title: title.trim(),
                 content: content.trim(),
                 category: category as 'jobs' | 'real_estate' | 'marketplace' | 'news' | 'announcements',
                 price: price ? parseInt(price, 10) : undefined,
+                region: region.trim() || undefined,
+                jobType: category === 'jobs' ? jobType : undefined,
+                realEstateType: category === 'real_estate' ? realEstateType : undefined,
+                marketplaceCondition: category === 'marketplace' ? marketplaceCondition : undefined,
+                images: imageUrls.length > 0 ? imageUrls : undefined,
                 authorId: user.id || 'anonymous',
                 authorName: user.displayName || '익명 사용자',
                 authorAvatar: user.photoUrl || undefined,
             });
 
             Alert.alert('완료', '게시글이 성공적으로 등록되었습니다.', [
-                { text: '확인', onPress: () => navigation.goBack() }
+                { text: '확인', onPress: () => navigation.goBack() },
             ]);
         } catch (error) {
             console.error(error);
@@ -62,21 +135,23 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
         >
             <ScreenContainer scrollable={true}>
                 <View style={styles.formContainer}>
-                    {/* Category Selector (Simplistic for MVP) */}
+                    {/* Category Selector */}
                     <Text style={styles.label}>카테고리</Text>
-                    <View style={styles.categoryContainer}>
-                        {['jobs', 'real_estate', 'marketplace', 'news'].map((cat) => (
-                            <View key={cat} style={styles.categoryButtonWrapper}>
-                                <Button
-                                    title={cat.toUpperCase()}
-                                    onPress={() => setCategory(cat as any)}
-                                    variant={category === cat ? 'primary' : 'outline'}
-                                />
-                            </View>
+                    <View style={styles.chipRow}>
+                        {(['jobs', 'real_estate', 'marketplace', 'news'] as const).map((cat) => (
+                            <TouchableOpacity
+                                key={cat}
+                                style={[styles.chip, category === cat && styles.chipActive]}
+                                onPress={() => setCategory(cat)}
+                            >
+                                <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>
+                                    {cat.toUpperCase()}
+                                </Text>
+                            </TouchableOpacity>
                         ))}
                     </View>
 
-                    {/* Title Input */}
+                    {/* Title */}
                     <Text style={styles.label}>제목</Text>
                     <TextInput
                         style={styles.input}
@@ -86,7 +161,70 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
                         maxLength={100}
                     />
 
-                    {/* Price Input (Conditional) */}
+                    {/* Region */}
+                    <Text style={styles.label}>지역</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="예: Sydney, Strathfield, Chatswood"
+                        value={region}
+                        onChangeText={setRegion}
+                    />
+
+                    {/* Job Type */}
+                    {category === 'jobs' && (
+                        <>
+                            <Text style={styles.label}>고용형태</Text>
+                            <View style={styles.chipRow}>
+                                {([['full_time', '정규직'], ['part_time', '파트타임'], ['contract', '계약직']] as const).map(([value, label]) => (
+                                    <TouchableOpacity
+                                        key={value}
+                                        style={[styles.chip, jobType === value && styles.chipActive]}
+                                        onPress={() => setJobType(value)}
+                                    >
+                                        <Text style={[styles.chipText, jobType === value && styles.chipTextActive]}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </>
+                    )}
+
+                    {/* Real Estate Type */}
+                    {category === 'real_estate' && (
+                        <>
+                            <Text style={styles.label}>매물형태</Text>
+                            <View style={styles.chipRow}>
+                                {([['studio', '스튜디오'], ['apartment', '아파트'], ['house', '하우스']] as const).map(([value, label]) => (
+                                    <TouchableOpacity
+                                        key={value}
+                                        style={[styles.chip, realEstateType === value && styles.chipActive]}
+                                        onPress={() => setRealEstateType(value)}
+                                    >
+                                        <Text style={[styles.chipText, realEstateType === value && styles.chipTextActive]}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </>
+                    )}
+
+                    {/* Marketplace Condition */}
+                    {category === 'marketplace' && (
+                        <>
+                            <Text style={styles.label}>상품상태</Text>
+                            <View style={styles.chipRow}>
+                                {([['new', '새 상품'], ['used', '중고']] as const).map(([value, label]) => (
+                                    <TouchableOpacity
+                                        key={value}
+                                        style={[styles.chip, marketplaceCondition === value && styles.chipActive]}
+                                        onPress={() => setMarketplaceCondition(value)}
+                                    >
+                                        <Text style={[styles.chipText, marketplaceCondition === value && styles.chipTextActive]}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </>
+                    )}
+
+                    {/* Price */}
                     {showPriceInput && (
                         <>
                             <Text style={styles.label}>가격 ($)</Text>
@@ -100,7 +238,7 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
                         </>
                     )}
 
-                    {/* Content Input */}
+                    {/* Content */}
                     <Text style={styles.label}>내용</Text>
                     <TextInput
                         style={[styles.input, styles.textArea]}
@@ -111,9 +249,43 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
                         textAlignVertical="top"
                     />
 
+                    {/* Image Picker */}
+                    <Text style={styles.label}>사진 (최대 5장)</Text>
+                    <TouchableOpacity
+                        style={styles.imagePickerButton}
+                        onPress={handlePickImages}
+                        disabled={isPickingImage}
+                    >
+                        {isPickingImage ? (
+                            <ActivityIndicator size="small" color="#3b82f6" />
+                        ) : (
+                            <Text style={styles.imagePickerText}>
+                                {selectedImageUris.length > 0
+                                    ? `${selectedImageUris.length}장 선택됨 — 변경하기`
+                                    : '+ 사진 선택'}
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+
+                    {selectedImageUris.length > 0 && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewRow}>
+                            {selectedImageUris.map((uri) => (
+                                <View key={uri} style={styles.imagePreviewItem}>
+                                    <Image source={{ uri }} style={styles.imagePreview} />
+                                    <TouchableOpacity
+                                        style={styles.imageRemoveButton}
+                                        onPress={() => handleRemoveImage(uri)}
+                                    >
+                                        <Text style={styles.imageRemoveText}>✕</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )}
+
                     <View style={styles.submitButtonWrapper}>
                         <Button
-                            title={isSubmitting ? "등록 중..." : "게시글 등록"}
+                            title={isSubmitting ? '등록 중...' : '게시글 등록'}
                             onPress={handleSubmit}
                             isLoading={isSubmitting}
                         />
@@ -137,15 +309,30 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         marginTop: 16,
     },
-    categoryContainer: {
+    chipRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
     },
-    categoryButtonWrapper: {
-        // Wrap to avoid Button needing style prop
-        marginRight: 4,
-        marginBottom: 4,
+    chip: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        backgroundColor: '#f9fafb',
+    },
+    chipActive: {
+        backgroundColor: '#3b82f6',
+        borderColor: '#3b82f6',
+    },
+    chipText: {
+        fontSize: 13,
+        color: '#374151',
+        fontWeight: '500',
+    },
+    chipTextActive: {
+        color: '#fff',
     },
     input: {
         borderWidth: 1,
@@ -157,6 +344,49 @@ const styles = StyleSheet.create({
     },
     textArea: {
         minHeight: 200,
+    },
+    imagePickerButton: {
+        borderWidth: 1,
+        borderColor: '#3b82f6',
+        borderStyle: 'dashed',
+        borderRadius: 8,
+        padding: 14,
+        alignItems: 'center',
+        backgroundColor: '#eff6ff',
+    },
+    imagePickerText: {
+        color: '#3b82f6',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    imagePreviewRow: {
+        marginTop: 12,
+    },
+    imagePreviewItem: {
+        position: 'relative',
+        marginRight: 10,
+    },
+    imagePreview: {
+        width: 90,
+        height: 90,
+        borderRadius: 8,
+        backgroundColor: '#f3f4f6',
+    },
+    imageRemoveButton: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: '#ef4444',
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    imageRemoveText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: 'bold',
     },
     submitButtonWrapper: {
         marginTop: 32,

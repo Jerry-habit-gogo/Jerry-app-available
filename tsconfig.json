@@ -11,6 +11,7 @@
     "isolatedModules": true,
     "strict": true,
     "moduleResolution": "bundler",
+    "customConditions": ["react-native"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

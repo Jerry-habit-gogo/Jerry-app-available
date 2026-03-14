@@ -8,8 +8,13 @@ interface PostCardProps {
     onPress: (post: Post) => void;
 }
 
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+    closed:  { label: '마감',    color: '#6B7280', bg: '#F3F4F6' },
+    sold:    { label: '판매완료', color: '#DC2626', bg: '#FEF2F2' },
+    filled:  { label: '충원완료', color: '#2563EB', bg: '#EFF6FF' },
+};
+
 export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
-    // Format date loosely for UI mockup
     const formatTimeAgo = (dateStr: string) => {
         const date = new Date(dateStr);
         const now = new Date();
@@ -21,10 +26,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
         return `${diffInDays}일 전`;
     };
 
+    const statusConfig = post.status && post.status !== 'active' ? STATUS_CONFIG[post.status] : null;
+
     return (
         <TouchableOpacity onPress={() => onPress(post)} activeOpacity={0.8}>
-            <Card style={styles.cardContainer}>
-                {/* Header: Author & Time */}
+            <Card style={[styles.cardContainer, !!post.isPinned && styles.pinnedCard]}>
+                {post.isPinned && (
+                    <View style={styles.pinnedBanner}>
+                        <Text style={styles.pinnedText}>📌 공지사항</Text>
+                    </View>
+                )}
+
+                {/* Header: Author, Time & Status badge */}
                 <View style={styles.header}>
                     <View style={styles.authorInfo}>
                         {post.authorAvatar ? (
@@ -38,16 +51,34 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                         )}
                         <Text style={styles.authorName}>{post.authorName}</Text>
                     </View>
-                    <Text style={styles.timeText}>{formatTimeAgo(post.createdAt)}</Text>
+                    <View style={styles.headerRight}>
+                        {statusConfig && (
+                            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                                <Text style={[styles.statusText, { color: statusConfig.color }]}>
+                                    {statusConfig.label}
+                                </Text>
+                            </View>
+                        )}
+                        <Text style={styles.timeText}>{formatTimeAgo(post.createdAt)}</Text>
+                    </View>
                 </View>
 
                 {/* Content: Title & Preview */}
-                <Text style={styles.title} numberOfLines={2}>{post.title}</Text>
+                <Text style={[styles.title, !!statusConfig && styles.titleDimmed]} numberOfLines={2}>{post.title}</Text>
                 <Text style={styles.preview} numberOfLines={3}>{post.content}</Text>
 
                 {/* Price Tag if applicable */}
                 {post.price && (
                     <Text style={styles.price}>${post.price.toLocaleString()}</Text>
+                )}
+
+                {(post.region || post.jobType || post.realEstateType || post.marketplaceCondition) && (
+                    <View style={styles.metaRow}>
+                        {post.region && <Text style={styles.metaText}>{post.region}</Text>}
+                        {post.jobType && <Text style={styles.metaText}>{post.jobType.replace('_', ' ')}</Text>}
+                        {post.realEstateType && <Text style={styles.metaText}>{post.realEstateType}</Text>}
+                        {post.marketplaceCondition && <Text style={styles.metaText}>{post.marketplaceCondition}</Text>}
+                    </View>
                 )}
 
                 {/* Optional Image Preview */}
@@ -71,11 +102,45 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         padding: 16,
     },
+    pinnedCard: {
+        borderLeftWidth: 3,
+        borderLeftColor: '#2563EB',
+    },
+    pinnedBanner: {
+        backgroundColor: '#EFF6FF',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        alignSelf: 'flex-start',
+        marginBottom: 10,
+    },
+    pinnedText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#2563EB',
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    statusBadge: {
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    titleDimmed: {
+        color: '#9CA3AF',
     },
     authorInfo: {
         flexDirection: 'row',
@@ -123,6 +188,20 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#10b981', // green for price
         marginBottom: 12,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+    },
+    metaText: {
+        fontSize: 12,
+        color: '#2563EB',
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
     },
     imagePreview: {
         width: '100%',

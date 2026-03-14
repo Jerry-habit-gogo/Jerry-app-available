@@ -7,6 +7,8 @@ export const mockPosts: Post[] = [
         authorName: 'Sydney Recruiter',
         authorAvatar: 'https://i.pravatar.cc/150?u=u1',
         category: 'jobs',
+        region: 'Sydney',
+        jobType: 'full_time',
         title: 'Looking for a Senior React Native Developer',
         content: 'We are a fast-growing startup in Sydney CBD looking for an experienced React Native developer to join our mobile team. Flexible working hours and great culture.',
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
@@ -19,6 +21,8 @@ export const mockPosts: Post[] = [
         authorId: 'u2',
         authorName: 'Strathfield Landlord',
         category: 'real_estate',
+        region: 'Strathfield',
+        realEstateType: 'studio',
         title: 'Sunny Studio in Strathfield, 5 mins to station',
         content: 'Fully furnished studio apartment available for rent. All bills included. Perfect for a student or single professional.',
         price: 450,
@@ -34,6 +38,8 @@ export const mockPosts: Post[] = [
         authorName: 'Tech Seller',
         authorAvatar: 'https://i.pravatar.cc/150?u=u3',
         category: 'marketplace',
+        region: 'Chatswood',
+        marketplaceCondition: 'used',
         title: 'MacBook Pro M2 2023 - Like New',
         content: 'Selling my MacBook Pro M2, 16GB RAM, 512GB SSD. Barely used, battery cycle count under 20. Comes with original box and charger.',
         price: 1800,
@@ -48,6 +54,7 @@ export const mockPosts: Post[] = [
         authorId: 'admin',
         authorName: 'Jerry Admin',
         category: 'news',
+        region: 'Sydney',
         title: 'New Public Transport Updates for Sydney',
         content: 'The NSW government has announced new updates to the train schedule affecting the T1 and T9 lines starting next month.',
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
@@ -60,6 +67,7 @@ export const mockPosts: Post[] = [
         authorId: 'admin',
         authorName: 'Jerry Admin',
         category: 'announcements',
+        region: 'Sydney',
         title: 'Welcome to the Jerry App!',
         content: 'We are thrilled to launch the Jerry App for our community. Please be respectful to others and enjoy your stay.',
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(), // 1 week ago
