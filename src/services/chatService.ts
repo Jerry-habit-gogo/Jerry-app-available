@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDoc,
+  increment,
   onSnapshot,
   orderBy,
   query,
@@ -14,6 +15,8 @@ import {
 import { auth, db, isFirebaseConfigured } from './firebase';
 import { ChatMessage, ChatParticipant, ChatRoom, Post } from '../types';
 import { createNotification } from './notificationService';
+import { isPermissionDeniedError } from './firestoreError';
+import { isPostActive, isPostDeleted } from '../constants/postStatus';
 
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_COLLECTION = 'messages';
@@ -44,6 +47,7 @@ const mapChatRoom = (id: string, data: Record<string, any>): ChatRoom => ({
   lastMessageSenderId: data.lastMessageSenderId,
   updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
   createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+  unreadCounts: data.unreadCounts ?? {},
 });
 
 const mapChatMessage = (chatId: string, id: string, data: Record<string, any>): ChatMessage => ({
@@ -57,12 +61,27 @@ const mapChatMessage = (chatId: string, id: string, data: Record<string, any>): 
 const buildChatId = (postId: string, participantIds: string[]) =>
   [postId, ...participantIds.sort()].join('__');
 
+export const fetchChatRoomById = async (chatId: string): Promise<ChatRoom | null> => {
+  ensureConfigured();
+
+  const chatRef = doc(db, CHATS_COLLECTION, chatId);
+  const snapshot = await getDoc(chatRef);
+  if (!snapshot.exists()) return null;
+  return mapChatRoom(snapshot.id, snapshot.data() as Record<string, any>);
+};
+
 export const createOrOpenChatForPost = async (post: Post) => {
   ensureConfigured();
   const currentUser = requireCurrentUser();
 
   if (currentUser.uid === post.authorId) {
     throw new Error('Cannot create a chat with your own post.');
+  }
+  if (isPostDeleted(post)) {
+    throw new Error('Cannot create a chat for a deleted post.');
+  }
+  if (!isPostActive(post)) {
+    throw new Error('Cannot create a chat for an inactive post.');
   }
 
   const chatId = buildChatId(post.id, [currentUser.uid, post.authorId]);
@@ -111,13 +130,24 @@ export const subscribeToUserChats = (
     where('participantIds', 'array-contains', userId)
   );
 
-  return onSnapshot(chatsQuery, (snapshot) => {
-    const rooms = snapshot.docs
-      .map((chatDoc) => mapChatRoom(chatDoc.id, chatDoc.data()))
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return onSnapshot(
+    chatsQuery,
+    (snapshot) => {
+      const rooms = snapshot.docs
+        .map((chatDoc) => mapChatRoom(chatDoc.id, chatDoc.data()))
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    callback(rooms);
-  });
+      callback(rooms);
+    },
+    (error) => {
+      if (isPermissionDeniedError(error)) {
+        console.warn('Chat rooms subscription denied by Firestore rules.');
+      } else {
+        console.error('Chat rooms subscription failed', error);
+      }
+      callback([]);
+    }
+  );
 };
 
 export const subscribeToChatMessages = (
@@ -131,11 +161,22 @@ export const subscribeToChatMessages = (
     orderBy('createdAt', 'asc')
   );
 
-  return onSnapshot(messagesQuery, (snapshot) => {
-    callback(
-      snapshot.docs.map((messageDoc) => mapChatMessage(chatId, messageDoc.id, messageDoc.data()))
-    );
-  });
+  return onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      callback(
+        snapshot.docs.map((messageDoc) => mapChatMessage(chatId, messageDoc.id, messageDoc.data()))
+      );
+    },
+    (error) => {
+      if (isPermissionDeniedError(error)) {
+        console.warn(`Chat messages subscription denied for room ${chatId}.`);
+      } else {
+        console.error('Chat messages subscription failed', error);
+      }
+      callback([]);
+    }
+  );
 };
 
 export const sendChatMessage = async (
@@ -164,6 +205,7 @@ export const sendChatMessage = async (
     lastMessage: trimmedText,
     lastMessageSenderId: currentUser.uid,
     updatedAt: serverTimestamp(),
+    ...(context?.recipientId ? { [`unreadCounts.${context.recipientId}`]: increment(1) } : {}),
   });
 
   // Notify the other participant (fire-and-forget)
@@ -176,4 +218,53 @@ export const sendChatMessage = async (
       { chatRoomId: chatId, actorId: currentUser.uid, actorName: context.senderName, postTitle: context.postTitle }
     ).catch(() => {});
   }
+};
+
+/**
+ * Reset the unread count for the given user in a chat room.
+ * Called when the user opens the chat detail screen.
+ */
+export const resetUnreadCount = async (chatId: string, userId: string): Promise<void> => {
+  if (!isFirebaseConfigured) return;
+  await updateDoc(doc(db, CHATS_COLLECTION, chatId), {
+    [`unreadCounts.${userId}`]: 0,
+  }).catch(() => {});
+};
+
+/**
+ * Real-time subscription to total unread chat count for a user.
+ * Sums unreadCounts[userId] across all chat rooms the user participates in.
+ */
+export const subscribeToUnreadChatCount = (
+  userId: string,
+  callback: (count: number) => void
+): (() => void) => {
+  if (!isFirebaseConfigured) {
+    callback(0);
+    return () => {};
+  }
+
+  const q = query(
+    collection(db, CHATS_COLLECTION),
+    where('participantIds', 'array-contains', userId)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const total = snapshot.docs.reduce((acc, chatDoc) => {
+        const unreadCounts: Record<string, number> = chatDoc.data().unreadCounts ?? {};
+        return acc + (unreadCounts[userId] ?? 0);
+      }, 0);
+      callback(total);
+    },
+    (error) => {
+      if (isPermissionDeniedError(error)) {
+        console.warn('Unread chat count subscription denied by Firestore rules.');
+      } else {
+        console.error('Unread chat count subscription failed', error);
+      }
+      callback(0);
+    }
+  );
 };

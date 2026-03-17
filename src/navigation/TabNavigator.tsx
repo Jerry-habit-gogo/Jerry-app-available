@@ -4,18 +4,17 @@ import { BoardListScreen } from '../screens/BoardListScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationScreen from '../screens/NotificationScreen';
+import HomeDashboardScreen from '../screens/HomeDashboardScreen';
 import { useUserStore } from '../store/userStore';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const { unreadNotificationCount } = useUserStore();
+  const { unreadNotificationCount, unreadChatCount } = useUserStore();
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: true }}>
-      <Tab.Screen name="Home" options={{ title: '홈' }}>
-        {() => <BoardListScreen />}
-      </Tab.Screen>
+      <Tab.Screen name="Home" component={HomeDashboardScreen} options={{ title: '홈', headerShown: false }} />
       <Tab.Screen name="Jobs" options={{ title: '구인구직' }}>
         {() => <BoardListScreen category="jobs" />}
       </Tab.Screen>
@@ -25,7 +24,14 @@ export default function TabNavigator() {
       <Tab.Screen name="Marketplace" options={{ title: '중고장터' }}>
         {() => <BoardListScreen category="marketplace" />}
       </Tab.Screen>
-      <Tab.Screen name="Chats" component={ChatScreen} options={{ title: '채팅' }} />
+      <Tab.Screen
+        name="Chats"
+        component={ChatScreen}
+        options={{
+          title: '채팅',
+          tabBarBadge: unreadChatCount > 0 ? unreadChatCount : undefined,
+        }}
+      />
       <Tab.Screen
         name="Notifications"
         component={NotificationScreen}

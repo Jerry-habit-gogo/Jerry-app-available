@@ -2,17 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Post } from '../types';
 import Card from './Card';
+import { PostStatusBadge } from './PostStatusBadge';
+import { getPostStatus, isPostActive } from '../constants/postStatus';
 
 interface PostCardProps {
     post: Post;
     onPress: (post: Post) => void;
 }
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-    closed:  { label: '마감',    color: '#6B7280', bg: '#F3F4F6' },
-    sold:    { label: '판매완료', color: '#DC2626', bg: '#FEF2F2' },
-    filled:  { label: '충원완료', color: '#2563EB', bg: '#EFF6FF' },
-};
 
 export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     const formatTimeAgo = (dateStr: string) => {
@@ -26,7 +22,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
         return `${diffInDays}일 전`;
     };
 
-    const statusConfig = post.status && post.status !== 'active' ? STATUS_CONFIG[post.status] : null;
+    const status = getPostStatus(post);
+    const isInactive = !isPostActive(post);
 
     return (
         <TouchableOpacity onPress={() => onPress(post)} activeOpacity={0.8}>
@@ -52,19 +49,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                         <Text style={styles.authorName}>{post.authorName}</Text>
                     </View>
                     <View style={styles.headerRight}>
-                        {statusConfig && (
-                            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                                <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                                    {statusConfig.label}
-                                </Text>
-                            </View>
-                        )}
+                        <PostStatusBadge status={status} />
                         <Text style={styles.timeText}>{formatTimeAgo(post.createdAt)}</Text>
                     </View>
                 </View>
 
                 {/* Content: Title & Preview */}
-                <Text style={[styles.title, !!statusConfig && styles.titleDimmed]} numberOfLines={2}>{post.title}</Text>
+                <Text style={[styles.title, isInactive && styles.titleDimmed]} numberOfLines={2}>{post.title}</Text>
                 <Text style={styles.preview} numberOfLines={3}>{post.content}</Text>
 
                 {/* Price Tag if applicable */}
@@ -129,15 +120,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-    },
-    statusBadge: {
-        paddingHorizontal: 7,
-        paddingVertical: 3,
-        borderRadius: 6,
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: '700',
     },
     titleDimmed: {
         color: '#9CA3AF',

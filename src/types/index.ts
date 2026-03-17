@@ -8,7 +8,7 @@ export interface User {
   updatedAt?: string;
 }
 
-export type PostStatus = 'active' | 'closed' | 'sold' | 'filled';
+export type PostStatus = 'active' | 'closed' | 'sold' | 'filled' | 'rented' | 'deleted';
 
 export interface Post {
   id: string;
@@ -70,6 +70,7 @@ export interface ChatRoom {
   lastMessageSenderId?: string;
   updatedAt: string;
   createdAt: string;
+  unreadCounts?: Record<string, number>;
 }
 
 export interface ChatMessage {
@@ -100,6 +101,8 @@ export interface Block {
   id: string;
   blockerId: string;
   blockedId: string;
+  blockedDisplayName?: string | null;
+  blockedPhotoUrl?: string | null;
   createdAt: string;
 }
 

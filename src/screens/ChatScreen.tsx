@@ -34,7 +34,7 @@ const formatUpdatedAt = (updatedAt: string) => {
 
 export default function ChatScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { user, blockedUserIds } = useUserStore();
+  const { user, blockedUserIds, setUnreadChatCount } = useUserStore();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
 
   useEffect(() => {
@@ -44,13 +44,14 @@ export default function ChatScreen() {
     }
 
     const unsubscribe = subscribeToUserChats(user.id, (allRooms) => {
-      // Hide chats with blocked users
       const visible = blockedUserIds.length > 0
         ? allRooms.filter((room) =>
             room.participantIds.every((id) => id === user.id || !blockedUserIds.includes(id))
           )
         : allRooms;
       setRooms(visible);
+      const total = visible.reduce((sum, room) => sum + (room.unreadCounts?.[user.id] ?? 0), 0);
+      setUnreadChatCount(total);
     });
     return unsubscribe;
   }, [user, blockedUserIds]);
@@ -78,6 +79,8 @@ export default function ChatScreen() {
         renderItem={({ item }) => {
           const otherUser = item.participants[item.participantIds.find((participantId) => participantId !== user.id) || ''];
 
+          const unreadCount = item.unreadCounts?.[user.id] ?? 0;
+
           return (
             <TouchableOpacity
               style={styles.chatCard}
@@ -96,13 +99,24 @@ export default function ChatScreen() {
 
               <View style={styles.chatMeta}>
                 <View style={styles.chatHeader}>
-                  <Text style={styles.chatTitle}>{otherUser?.displayName || '상대방'}</Text>
-                  <Text style={styles.chatDate}>{formatUpdatedAt(item.updatedAt)}</Text>
+                  <Text style={[styles.chatTitle, unreadCount > 0 && styles.chatTitleUnread]}>
+                    {otherUser?.displayName || '상대방'}
+                  </Text>
+                  <View style={styles.chatHeaderRight}>
+                    {unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadBadgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={styles.chatDate}>{formatUpdatedAt(item.updatedAt)}</Text>
+                  </View>
                 </View>
                 <Text style={styles.postTitle} numberOfLines={1}>
                   {item.postTitle}
                 </Text>
-                <Text style={styles.lastMessage} numberOfLines={1}>
+                <Text style={[styles.lastMessage, unreadCount > 0 && styles.lastMessageUnread]} numberOfLines={1}>
                   {item.lastMessage || '아직 메시지가 없습니다.'}
                 </Text>
               </View>
@@ -160,16 +174,39 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
+  },
+  chatHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   chatTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111',
   },
+  chatTitleUnread: {
+    color: '#1D4ED8',
+  },
   chatDate: {
     fontSize: 12,
     color: '#888',
+  },
+  unreadBadge: {
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
   },
   postTitle: {
     fontSize: 13,
@@ -179,6 +216,10 @@ const styles = StyleSheet.create({
   lastMessage: {
     fontSize: 14,
     color: '#555',
+  },
+  lastMessageUnread: {
+    fontWeight: '600',
+    color: '#111',
   },
   emptyState: {
     backgroundColor: '#fff',

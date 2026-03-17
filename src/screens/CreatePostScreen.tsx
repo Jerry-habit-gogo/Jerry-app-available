@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -17,26 +17,34 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import ScreenContainer from '../components/ScreenContainer';
 import Button from '../components/Button';
-import { createPost, uploadPostImages } from '../services/boardService';
+import { createPost, updatePost, uploadPostImages } from '../services/boardService';
 import { useUserStore } from '../store/userStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePost'>;
 
 export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
     const { user } = useUserStore();
-    const initialCategory = route.params?.category || 'jobs';
+    const existingPost = route.params?.post;
+    const isEditMode = !!existingPost;
+    const initialCategory = existingPost?.category || route.params?.category || 'jobs';
 
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    const [title, setTitle] = useState(existingPost?.title || '');
+    const [content, setContent] = useState(existingPost?.content || '');
     const [category, setCategory] = useState(initialCategory);
-    const [price, setPrice] = useState('');
-    const [region, setRegion] = useState('');
-    const [jobType, setJobType] = useState<'full_time' | 'part_time' | 'contract' | undefined>(undefined);
-    const [realEstateType, setRealEstateType] = useState<'studio' | 'apartment' | 'house' | undefined>(undefined);
-    const [marketplaceCondition, setMarketplaceCondition] = useState<'new' | 'used' | undefined>(undefined);
-    const [selectedImageUris, setSelectedImageUris] = useState<string[]>([]);
+    const [price, setPrice] = useState(existingPost?.price != null ? String(existingPost.price) : '');
+    const [region, setRegion] = useState(existingPost?.region || '');
+    const [jobType, setJobType] = useState<'full_time' | 'part_time' | 'contract' | undefined>(existingPost?.jobType);
+    const [realEstateType, setRealEstateType] = useState<'studio' | 'apartment' | 'house' | undefined>(existingPost?.realEstateType);
+    const [marketplaceCondition, setMarketplaceCondition] = useState<'new' | 'used' | undefined>(existingPost?.marketplaceCondition);
+    const [selectedImageUris, setSelectedImageUris] = useState<string[]>(existingPost?.images || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPickingImage, setIsPickingImage] = useState(false);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            title: isEditMode ? '게시글 수정' : '글쓰기',
+        });
+    }, [isEditMode, navigation]);
 
     const handlePickImages = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -94,13 +102,14 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
 
         setIsSubmitting(true);
         try {
-            // Upload images first, then attach download URLs to the post
-            let imageUrls: string[] = [];
-            if (selectedImageUris.length > 0) {
-                imageUrls = await uploadPostImages(user.id, selectedImageUris);
-            }
+            const existingImageUrls = selectedImageUris.filter((uri) => uri.startsWith('http'));
+            const newLocalImageUris = selectedImageUris.filter((uri) => !uri.startsWith('http'));
+            const uploadedImageUrls = newLocalImageUris.length > 0
+                ? await uploadPostImages(user.id, newLocalImageUris)
+                : [];
+            const imageUrls = [...existingImageUrls, ...uploadedImageUrls];
 
-            await createPost({
+            const payload = {
                 title: title.trim(),
                 content: content.trim(),
                 category: category as 'jobs' | 'real_estate' | 'marketplace' | 'news' | 'announcements',
@@ -113,14 +122,20 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
                 authorId: user.id || 'anonymous',
                 authorName: user.displayName || '익명 사용자',
                 authorAvatar: user.photoUrl || undefined,
-            });
+            };
 
-            Alert.alert('완료', '게시글이 성공적으로 등록되었습니다.', [
+            if (isEditMode && existingPost) {
+                await updatePost(existingPost.id, payload);
+            } else {
+                await createPost(payload);
+            }
+
+            Alert.alert('완료', isEditMode ? '게시글이 수정되었습니다.' : '게시글이 성공적으로 등록되었습니다.', [
                 { text: '확인', onPress: () => navigation.goBack() },
             ]);
         } catch (error) {
             console.error(error);
-            Alert.alert('오류', '게시글 등록에 실패했습니다.');
+            Alert.alert('오류', isEditMode ? '게시글 수정에 실패했습니다.' : '게시글 등록에 실패했습니다.');
         } finally {
             setIsSubmitting(false);
         }
@@ -285,7 +300,11 @@ export const CreatePostScreen: React.FC<Props> = ({ route, navigation }) => {
 
                     <View style={styles.submitButtonWrapper}>
                         <Button
-                            title={isSubmitting ? '등록 중...' : '게시글 등록'}
+                            title={
+                                isSubmitting
+                                    ? (isEditMode ? '수정 중...' : '등록 중...')
+                                    : (isEditMode ? '게시글 수정' : '게시글 등록')
+                            }
                             onPress={handleSubmit}
                             isLoading={isSubmitting}
                         />

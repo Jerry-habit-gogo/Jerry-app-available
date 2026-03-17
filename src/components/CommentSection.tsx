@@ -6,9 +6,23 @@ interface CommentSectionProps {
     comments: Comment[];
     onAddComment: (content: string) => void;
     isSubmitting?: boolean;
+    currentUserId?: string;
+    onDeleteComment?: (commentId: string) => void;
+    onReportComment?: (comment: Comment) => void;
+    disabled?: boolean;
+    disabledMessage?: string;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddComment, isSubmitting = false }) => {
+export const CommentSection: React.FC<CommentSectionProps> = ({
+    comments,
+    onAddComment,
+    isSubmitting = false,
+    currentUserId,
+    onDeleteComment,
+    onReportComment,
+    disabled = false,
+    disabledMessage,
+}) => {
     const [newComment, setNewComment] = useState('');
 
     const handleSubmit = () => {
@@ -43,16 +57,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddC
                     value={newComment}
                     onChangeText={setNewComment}
                     multiline
-                    editable={!isSubmitting}
+                    editable={!isSubmitting && !disabled}
                 />
                 <TouchableOpacity
-                    style={[styles.submitButton, (!newComment.trim() || isSubmitting) && styles.submitButtonDisabled]}
+                    style={[styles.submitButton, (!newComment.trim() || isSubmitting || disabled) && styles.submitButtonDisabled]}
                     onPress={handleSubmit}
-                    disabled={!newComment.trim() || isSubmitting}
+                    disabled={!newComment.trim() || isSubmitting || disabled}
                 >
                     <Text style={styles.submitButtonText}>{isSubmitting ? '등록 중...' : '등록'}</Text>
                 </TouchableOpacity>
             </View>
+            {disabledMessage ? (
+                <Text style={styles.disabledMessage}>{disabledMessage}</Text>
+            ) : null}
 
             {/* Comments List */}
             <View style={styles.listContainer}>
@@ -71,7 +88,27 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddC
                                 )}
                                 <Text style={styles.authorName}>{comment.authorName}</Text>
                             </View>
-                            <Text style={styles.timeText}>{formatTimeAgo(comment.createdAt)}</Text>
+                            <View style={styles.commentHeaderRight}>
+                                <Text style={styles.timeText}>{formatTimeAgo(comment.createdAt)}</Text>
+                                {currentUserId && comment.authorId === currentUserId && onDeleteComment && (
+                                    <TouchableOpacity
+                                        onPress={() => onDeleteComment(comment.id)}
+                                        style={styles.deleteButton}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={styles.deleteButtonText}>삭제</Text>
+                                    </TouchableOpacity>
+                                )}
+                                {currentUserId && comment.authorId !== currentUserId && onReportComment && (
+                                    <TouchableOpacity
+                                        onPress={() => onReportComment(comment)}
+                                        style={styles.deleteButton}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={styles.reportButtonText}>신고</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         </View>
                         <Text style={styles.commentContent}>{comment.content}</Text>
                     </View>
@@ -136,6 +173,12 @@ const styles = StyleSheet.create({
     listContainer: {
         gap: 16,
     },
+    disabledMessage: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        marginTop: -10,
+        marginBottom: 16,
+    },
     commentItem: {
         paddingBottom: 16,
         borderBottomWidth: 1,
@@ -180,6 +223,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#333',
         lineHeight: 20,
-        marginLeft: 32, // align with text, skip avatar
+        marginLeft: 32,
+    },
+    commentHeaderRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    deleteButton: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    deleteButtonText: {
+        fontSize: 12,
+        color: '#EF4444',
+    },
+    reportButtonText: {
+        fontSize: 12,
+        color: '#9CA3AF',
     },
 });

@@ -12,7 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Button from '../components/Button';
 import ScreenContainer from '../components/ScreenContainer';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { sendChatMessage, subscribeToChatMessages } from '../services/chatService';
+import { sendChatMessage, subscribeToChatMessages, resetUnreadCount } from '../services/chatService';
 import { ChatMessage } from '../types';
 import { useUserStore } from '../store/userStore';
 
@@ -39,6 +39,12 @@ export default function ChatDetailScreen({ route }: Props) {
     const unsubscribe = subscribeToChatMessages(chatRoom.id, setMessages);
     return unsubscribe;
   }, [chatRoom.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      resetUnreadCount(chatRoom.id, user.id);
+    }
+  }, [chatRoom.id, user?.id]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) {

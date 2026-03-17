@@ -11,7 +11,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
-import { ReportReason } from '../types';
+import { Block, ReportReason } from '../types';
 
 const REPORTS_COLLECTION = 'reports';
 const BLOCKS_COLLECTION = 'blocks';
@@ -58,9 +58,13 @@ export const reportContent = async (
 
 /**
  * Block a user. Creates a deterministic block document.
+ * Pass displayInfo to store the user's name/avatar at block time (shown in blocked list).
  * Idempotent — safe to call multiple times.
  */
-export const blockUser = async (blockedId: string): Promise<void> => {
+export const blockUser = async (
+  blockedId: string,
+  displayInfo?: { displayName?: string | null; photoUrl?: string | null }
+): Promise<void> => {
   requireFirebase();
   const user = requireAuth();
   if (user.uid === blockedId) throw new Error('Cannot block yourself.');
@@ -69,6 +73,8 @@ export const blockUser = async (blockedId: string): Promise<void> => {
   await setDoc(doc(db, BLOCKS_COLLECTION, blockId), {
     blockerId: user.uid,
     blockedId,
+    blockedDisplayName: displayInfo?.displayName ?? null,
+    blockedPhotoUrl: displayInfo?.photoUrl ?? null,
     createdAt: serverTimestamp(),
   });
 };
@@ -107,4 +113,28 @@ export const isUserBlocked = async (targetId: string): Promise<boolean> => {
   const blockId = buildBlockId(auth.currentUser.uid, targetId);
   const snapshot = await getDoc(doc(db, BLOCKS_COLLECTION, blockId));
   return snapshot.exists();
+};
+
+/**
+ * Returns full Block objects (with stored display info) for all users blocked by current user.
+ */
+export const fetchBlockedUsers = async (): Promise<Block[]> => {
+  if (!isFirebaseConfigured || !auth.currentUser) return [];
+
+  const q = query(
+    collection(db, BLOCKS_COLLECTION),
+    where('blockerId', '==', auth.currentUser.uid)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      blockerId: data.blockerId,
+      blockedId: data.blockedId,
+      blockedDisplayName: data.blockedDisplayName ?? null,
+      blockedPhotoUrl: data.blockedPhotoUrl ?? null,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
+    } as Block;
+  });
 };

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Alert, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import Button from '../components/Button';
@@ -8,72 +9,104 @@ import { CommentSection } from '../components/CommentSection';
 import { ReportModal } from '../components/ReportModal';
 import {
     fetchPostById,
+    readPostById,
     fetchPostComments,
     addComment,
     togglePostLike,
     checkUserLiked,
     updatePostStatus,
+    deletePost,
+    deleteComment,
 } from '../services/boardService';
 import { createOrOpenChatForPost } from '../services/chatService';
 import { blockUser } from '../services/moderationService';
+import {
+    isPostSaved,
+    toggleSavedPost,
+    trackRecentlyViewed,
+} from '../services/userContentService';
 import { useUserStore } from '../store/userStore';
 import { Comment, Post, PostStatus } from '../types';
+import {
+    getPostStatus,
+    isPostActive,
+    isPostDeleted,
+    POST_STATUS_LABELS,
+    POST_STATUS_STYLES,
+} from '../constants/postStatus';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostDetail'>;
-
-const STATUS_LABELS: Record<PostStatus, string> = {
-    active: '활성',
-    closed: '마감',
-    sold: '판매완료',
-    filled: '충원완료',
-};
-
-const STATUS_BADGE_STYLE: Record<PostStatus, { color: string; bg: string }> = {
-    active:  { color: '#059669', bg: '#D1FAE5' },
-    closed:  { color: '#6B7280', bg: '#F3F4F6' },
-    sold:    { color: '#DC2626', bg: '#FEF2F2' },
-    filled:  { color: '#2563EB', bg: '#EFF6FF' },
-};
 
 export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     const { post: routePost } = route.params;
     const { user } = useUserStore();
 
     const [post, setPost] = useState<Post>(routePost);
+    const [isDeleted, setIsDeleted] = useState(isPostDeleted(routePost));
     const [comments, setComments] = useState<Comment[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isOpeningChat, setIsOpeningChat] = useState(false);
     const [liked, setLiked] = useState(false);
+    const [saved, setSaved] = useState(false);
     const [likeCount, setLikeCount] = useState(routePost.likeCount);
     const [commentCount, setCommentCount] = useState(routePost.commentCount);
     const [reportVisible, setReportVisible] = useState(false);
+    const [reportCommentTarget, setReportCommentTarget] = useState<Comment | null>(null);
+    const hasTrackedInitialViewRef = useRef(false);
 
     const isAuthor = !!user && user.id === post.authorId;
+    const currentStatus = isDeleted ? 'deleted' : getPostStatus(post);
+    const isActive = !isDeleted && isPostActive(post);
+    const badgeStyle = POST_STATUS_STYLES[currentStatus];
+    const statusLabel = POST_STATUS_LABELS[currentStatus];
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const [freshPost, fetchedComments, alreadyLiked] = await Promise.all([
-                    fetchPostById(routePost.id),
-                    fetchPostComments(routePost.id),
-                    checkUserLiked(routePost.id),
-                ]);
+    const loadPostData = useCallback(async (trackView: boolean) => {
+        try {
+            const [freshPost, fetchedComments, alreadyLiked, alreadySaved] = await Promise.all([
+                trackView ? fetchPostById(routePost.id) : readPostById(routePost.id),
+                fetchPostComments(routePost.id),
+                checkUserLiked(routePost.id),
+                isPostSaved(routePost.id),
+            ]);
 
-                if (freshPost) {
-                    setPost(freshPost);
-                    setLikeCount(freshPost.likeCount);
-                    setCommentCount(freshPost.commentCount);
+            if (freshPost) {
+                setPost(freshPost);
+                setIsDeleted(isPostDeleted(freshPost));
+                setLikeCount(freshPost.likeCount);
+                setCommentCount(freshPost.commentCount);
+                if (!isPostDeleted(freshPost)) {
+                    trackRecentlyViewed(freshPost);
                 }
-                setComments(fetchedComments);
-                setLiked(alreadyLiked);
-            } catch (error) {
-                console.error('Failed to load post data', error);
+            } else {
+                setIsDeleted(true);
+                setPost((prev) => ({ ...prev, status: 'deleted' }));
             }
-        };
-        load();
+            setComments(freshPost && !isPostDeleted(freshPost) ? fetchedComments : []);
+            setLiked(alreadyLiked);
+            setSaved(alreadySaved);
+        } catch (error) {
+            console.error('Failed to load post data', error);
+        }
     }, [routePost.id]);
 
+    useEffect(() => {
+        hasTrackedInitialViewRef.current = false;
+    }, [routePost.id]);
+
+    useFocusEffect(
+        useCallback(() => {
+            const trackView = !hasTrackedInitialViewRef.current;
+            hasTrackedInitialViewRef.current = true;
+            loadPostData(trackView);
+        }, [loadPostData])
+    );
+
     const handleAddComment = async (content: string) => {
+        if (!isActive) {
+            Alert.alert('안내', '활성 상태의 게시글에만 댓글을 남길 수 있습니다.');
+            return;
+        }
+
         if (!user) {
             Alert.alert('알림', '로그인이 필요합니다.', [
                 { text: '취소', style: 'cancel' },
@@ -132,7 +165,29 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         }
     };
 
+    const handleSave = async () => {
+        if (!user) {
+            Alert.alert('알림', '로그인이 필요합니다.', [
+                { text: '취소', style: 'cancel' },
+                { text: '로그인', onPress: () => navigation.navigate('Auth') },
+            ]);
+            return;
+        }
+        const newSaved = !saved;
+        setSaved(newSaved);
+        try {
+            await toggleSavedPost(post.id, newSaved, post);
+        } catch {
+            setSaved(!newSaved);
+        }
+    };
+
     const handleOpenChat = async () => {
+        if (!isActive) {
+            Alert.alert('안내', '활성 상태의 게시글에만 연락할 수 있습니다.');
+            return;
+        }
+
         if (!user) {
             Alert.alert('알림', '로그인이 필요합니다.', [
                 { text: '취소', style: 'cancel' },
@@ -153,6 +208,45 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         }
     };
 
+    const handleDeletePost = () => {
+        Alert.alert('게시글 삭제', '이 게시글을 삭제 상태로 변경하시겠습니까? 일반 사용자에게는 더 이상 노출되지 않습니다.', [
+            { text: '취소', style: 'cancel' },
+            {
+                text: '삭제',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await deletePost(post.id);
+                        setPost((prev) => ({ ...prev, status: 'deleted' }));
+                        setIsDeleted(true);
+                        setComments([]);
+                    } catch {
+                        Alert.alert('오류', '게시글 삭제에 실패했습니다.');
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        Alert.alert('댓글 삭제', '이 댓글을 삭제하시겠습니까?', [
+            { text: '취소', style: 'cancel' },
+            {
+                text: '삭제',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await deleteComment(post.id, commentId);
+                        setComments((prev) => prev.filter((c) => c.id !== commentId));
+                        setCommentCount((prev) => Math.max(0, prev - 1));
+                    } catch {
+                        Alert.alert('오류', '댓글 삭제에 실패했습니다.');
+                    }
+                },
+            },
+        ]);
+    };
+
     const handleMoreMenu = () => {
         if (!user) {
             navigation.navigate('Auth');
@@ -160,12 +254,15 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         }
 
         if (isAuthor) {
-            const currentLabel = STATUS_LABELS[post.status ?? 'active'];
+            const currentLabel = POST_STATUS_LABELS[currentStatus];
             Alert.alert('게시글 관리', `현재 상태: ${currentLabel}`, [
+                { text: '게시글 수정', onPress: () => navigation.navigate('CreatePost', { post }) },
                 { text: '마감으로 변경', onPress: () => handleUpdateStatus('closed') },
                 { text: '판매완료로 변경', onPress: () => handleUpdateStatus('sold') },
                 { text: '충원완료로 변경', onPress: () => handleUpdateStatus('filled') },
+                { text: '임대완료로 변경', onPress: () => handleUpdateStatus('rented') },
                 { text: '다시 활성화', onPress: () => handleUpdateStatus('active') },
+                { text: '게시글 삭제', style: 'destructive', onPress: handleDeletePost },
                 { text: '취소', style: 'cancel' },
             ]);
         } else {
@@ -181,6 +278,7 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         try {
             await updatePostStatus(post.id, status);
             setPost((prev) => ({ ...prev, status }));
+            setIsDeleted(status === 'deleted');
         } catch {
             Alert.alert('오류', '상태 변경에 실패했습니다.');
         }
@@ -197,7 +295,10 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await blockUser(post.authorId);
+                            await blockUser(post.authorId, {
+                                displayName: post.authorName,
+                                photoUrl: post.authorAvatar,
+                            });
                             Alert.alert('완료', '차단되었습니다.');
                             navigation.goBack();
                         } catch {
@@ -214,8 +315,11 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     };
 
-    const currentStatus = post.status ?? 'active';
-    const badgeStyle = STATUS_BADGE_STYLE[currentStatus];
+    const commentDisabledMessage = isDeleted
+        ? '삭제된 게시글에는 댓글을 작성할 수 없습니다.'
+        : !isActive
+            ? `${statusLabel} 상태의 게시글에는 댓글을 작성할 수 없습니다.`
+            : undefined;
 
     return (
         <ScreenContainer scrollable={true}>
@@ -250,51 +354,85 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 {currentStatus !== 'active' && (
                     <View style={[styles.statusBanner, { backgroundColor: badgeStyle.bg }]}>
                         <Text style={[styles.statusBannerText, { color: badgeStyle.color }]}>
-                            {STATUS_LABELS[currentStatus]}
+                            {statusLabel}
                         </Text>
                     </View>
                 )}
 
                 <Text style={styles.title}>{post.title}</Text>
 
-                {post.price != null && (
-                    <Text style={styles.price}>${post.price.toLocaleString()}</Text>
-                )}
-
-                {post.images && post.images.length > 0 && (
-                    <Image source={{ uri: post.images[0] }} style={styles.mainImage} />
-                )}
-
-                <Text style={styles.content}>{post.content}</Text>
-
-                {!isAuthor && (
-                    <View style={styles.chatAction}>
-                        <Button
-                            title={isOpeningChat ? '채팅방 여는 중...' : '작성자와 채팅하기'}
-                            onPress={handleOpenChat}
-                            isLoading={isOpeningChat}
-                        />
-                    </View>
-                )}
-
-                <View style={styles.statsContainer}>
-                    <Text style={styles.statsText}>조회 {post.viewCount}</Text>
-                    <Text style={styles.statsText}>·</Text>
-                    <Text style={styles.statsText}>댓글 {commentCount}</Text>
-                    <Text style={styles.statsText}>·</Text>
-                    <TouchableOpacity onPress={handleLike} style={styles.likeButton}>
-                        <Text style={[styles.statsText, liked && styles.likedText]}>
-                            {liked ? '♥' : '♡'} {likeCount}
+                {isDeleted ? (
+                    <View style={styles.deletedState}>
+                        <Text style={styles.deletedTitle}>삭제된 게시글입니다.</Text>
+                        <Text style={styles.deletedDescription}>
+                            이 게시글은 더 이상 확인하거나 연락할 수 없습니다.
                         </Text>
-                    </TouchableOpacity>
-                </View>
+                    </View>
+                ) : (
+                    <>
+                        {post.price != null && (
+                            <Text style={styles.price}>${post.price.toLocaleString()}</Text>
+                        )}
+
+                        {post.images && post.images.length > 0 && (
+                            <Image source={{ uri: post.images[0] }} style={styles.mainImage} />
+                        )}
+
+                        <Text style={styles.content}>{post.content}</Text>
+
+                        {!isAuthor && (
+                            <View style={styles.chatAction}>
+                                <Button
+                                    title={
+                                        isActive
+                                            ? (isOpeningChat ? '채팅방 여는 중...' : '작성자와 채팅하기')
+                                            : `${statusLabel} 게시글`
+                                    }
+                                    onPress={handleOpenChat}
+                                    isLoading={isOpeningChat}
+                                    disabled={!isActive}
+                                />
+                                {!isActive ? (
+                                    <Text style={styles.actionHint}>
+                                        활성 상태의 게시글에만 작성자와 연락할 수 있습니다.
+                                    </Text>
+                                ) : null}
+                            </View>
+                        )}
+
+                        <View style={styles.statsContainer}>
+                            <Text style={styles.statsText}>조회 {post.viewCount}</Text>
+                            <Text style={styles.statsText}>·</Text>
+                            <Text style={styles.statsText}>댓글 {commentCount}</Text>
+                            <Text style={styles.statsText}>·</Text>
+                            <TouchableOpacity onPress={handleLike} style={styles.likeButton}>
+                                <Text style={[styles.statsText, liked && styles.likedText]}>
+                                    {liked ? '♥' : '♡'} {likeCount}
+                                </Text>
+                            </TouchableOpacity>
+                            <View style={styles.statsSpacer} />
+                            <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+                                <Text style={[styles.saveIcon, saved && styles.savedIcon]}>
+                                    {saved ? '★' : '☆'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
             </View>
 
-            <CommentSection
-                comments={comments}
-                onAddComment={handleAddComment}
-                isSubmitting={isSubmitting}
-            />
+            {!isDeleted ? (
+                <CommentSection
+                    comments={comments}
+                    onAddComment={handleAddComment}
+                    isSubmitting={isSubmitting}
+                    currentUserId={user?.id}
+                    onDeleteComment={handleDeleteComment}
+                    onReportComment={(comment) => setReportCommentTarget(comment)}
+                    disabled={!isActive}
+                    disabledMessage={commentDisabledMessage}
+                />
+            ) : null}
 
             <ReportModal
                 visible={reportVisible}
@@ -302,6 +440,13 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 targetId={post.id}
                 postId={post.id}
                 onClose={() => setReportVisible(false)}
+            />
+            <ReportModal
+                visible={reportCommentTarget !== null}
+                targetType="comment"
+                targetId={reportCommentTarget?.id ?? ''}
+                postId={post.id}
+                onClose={() => setReportCommentTarget(null)}
             />
         </ScreenContainer>
     );
@@ -411,6 +556,25 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         marginBottom: 24,
     },
+    deletedState: {
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 10,
+        padding: 16,
+        marginBottom: 8,
+    },
+    deletedTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 6,
+    },
+    deletedDescription: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
+    },
     statsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -420,6 +584,11 @@ const styles = StyleSheet.create({
     },
     chatAction: {
         marginBottom: 8,
+    },
+    actionHint: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        marginTop: 8,
     },
     statsText: {
         fontSize: 13,
@@ -432,5 +601,18 @@ const styles = StyleSheet.create({
     likedText: {
         color: '#ef4444',
         fontWeight: 'bold',
+    },
+    statsSpacer: {
+        flex: 1,
+    },
+    saveButton: {
+        padding: 4,
+    },
+    saveIcon: {
+        fontSize: 20,
+        color: '#9CA3AF',
+    },
+    savedIcon: {
+        color: '#F59E0B',
     },
 });

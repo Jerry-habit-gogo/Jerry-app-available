@@ -2,11 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AppNotification } from '../types';
 
-const TYPE_ICONS: Record<AppNotification['type'], string> = {
-  chat_message: '💬',
-  comment: '🗨️',
-  like: '❤️',
-  announcement: '📢',
+// Type-specific icon + accent color
+const TYPE_CONFIG: Record<
+  AppNotification['type'],
+  { icon: string; color: string; bg: string }
+> = {
+  chat_message: { icon: '💬', color: '#2563EB', bg: '#EFF6FF' },
+  comment:      { icon: '🗨️',  color: '#059669', bg: '#ECFDF5' },
+  like:         { icon: '❤️',  color: '#DC2626', bg: '#FEF2F2' },
+  announcement: { icon: '📢', color: '#D97706', bg: '#FFFBEB' },
 };
 
 const formatTimeAgo = (dateStr: string): string => {
@@ -24,69 +28,102 @@ interface NotificationItemProps {
   onPress: (notification: AppNotification) => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress }) => (
-  <TouchableOpacity
-    style={[styles.container, !notification.read && styles.unread]}
-    onPress={() => onPress(notification)}
-    activeOpacity={0.75}
-  >
-    <Text style={styles.icon}>{TYPE_ICONS[notification.type]}</Text>
-    <View style={styles.content}>
-      <Text style={[styles.title, !notification.read && styles.titleBold]} numberOfLines={1}>
-        {notification.title}
-      </Text>
-      <Text style={styles.body} numberOfLines={2}>{notification.body}</Text>
-      <Text style={styles.time}>{formatTimeAgo(notification.createdAt)}</Text>
-    </View>
-    {!notification.read && <View style={styles.dot} />}
-  </TouchableOpacity>
-);
+export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress }) => {
+  const cfg = TYPE_CONFIG[notification.type];
+  const isUnread = !notification.read;
+
+  return (
+    <TouchableOpacity
+      style={[styles.container, isUnread && styles.unread]}
+      onPress={() => onPress(notification)}
+      activeOpacity={0.7}
+    >
+      {isUnread && <View style={[styles.leftBar, { backgroundColor: cfg.color }]} />}
+
+      <View style={[styles.iconWrap, { backgroundColor: cfg.bg }]}>
+        <Text style={styles.iconText}>{cfg.icon}</Text>
+      </View>
+
+      <View style={styles.body}>
+        <Text
+          style={[styles.title, isUnread && styles.titleUnread]}
+          numberOfLines={1}
+        >
+          {notification.title}
+        </Text>
+        <Text style={styles.bodyText} numberOfLines={2}>
+          {notification.body}
+        </Text>
+        <Text style={styles.time}>{formatTimeAgo(notification.createdAt)}</Text>
+      </View>
+
+      {isUnread && <View style={[styles.dot, { backgroundColor: cfg.color }]} />}
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     marginBottom: 8,
+    overflow: 'hidden',
   },
   unread: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F8FAFF',
   },
-  icon: {
-    fontSize: 22,
+  leftBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderRadius: 2,
+  },
+  iconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
-    marginTop: 2,
+    flexShrink: 0,
   },
-  content: {
+  iconText: {
+    fontSize: 20,
+  },
+  body: {
     flex: 1,
+    gap: 2,
   },
   title: {
     fontSize: 14,
     color: '#374151',
-    marginBottom: 2,
+    fontWeight: '500',
   },
-  titleBold: {
+  titleUnread: {
     fontWeight: '700',
-    color: '#111',
+    color: '#111827',
   },
-  body: {
+  bodyText: {
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18,
-    marginBottom: 4,
   },
   time: {
     fontSize: 11,
     color: '#9CA3AF',
+    marginTop: 2,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2563EB',
-    marginTop: 6,
-    marginLeft: 8,
+    marginLeft: 10,
+    flexShrink: 0,
   },
 });

@@ -25,6 +25,7 @@ import { auth, db, isFirebaseConfigured, storage } from './firebase';
 import { Post, Comment, PostFilterOptions, PostStatus } from '../types';
 import { mockPosts, mockComments } from './mockData';
 import { createNotification } from './notificationService';
+import { isPostDeleted } from '../constants/postStatus';
 
 const POSTS_COLLECTION = 'posts';
 
@@ -33,6 +34,9 @@ let localPosts: Post[] = [...mockPosts];
 let localComments: Record<string, Comment[]> = { ...mockComments };
 
 // --- Helpers ---
+
+const omitUndefined = <T extends Record<string, unknown>>(value: T): T =>
+    Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 
 const mapPostDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): Post => {
     const data = docSnap.data();
@@ -51,6 +55,9 @@ const applySearchFilter = (posts: Post[], searchText?: string): Post[] => {
         (p) => p.title.toLowerCase().includes(lower) || p.content.toLowerCase().includes(lower)
     );
 };
+
+const filterVisiblePosts = (posts: Post[]): Post[] =>
+    posts.filter((post) => !isPostDeleted(post));
 
 // --- Image Upload ---
 
@@ -112,7 +119,7 @@ export const fetchPosts = async (
         const categoryPosts = options.category
             ? localPosts.filter((p) => p.category === options.category)
             : localPosts;
-        const filtered = applySearchFilter(categoryPosts, options.searchText);
+        const filtered = applySearchFilter(filterVisiblePosts(categoryPosts), options.searchText);
         return { posts: filtered.slice(0, pageSize), lastVisible: undefined };
     }
 
@@ -137,7 +144,7 @@ export const fetchPosts = async (
 
     const q = query(collection(db, POSTS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
-    const posts = applySearchFilter(snapshot.docs.map(mapPostDoc), options.searchText);
+    const posts = applySearchFilter(filterVisiblePosts(snapshot.docs.map(mapPostDoc)), options.searchText);
 
     return {
         posts,
@@ -155,18 +162,38 @@ export const fetchPostsByAuthor = async (authorId: string, pageSize: number = 20
     if (!isFirebaseConfigured) {
         return localPosts
             .filter((p) => p.authorId === authorId)
+            .filter((p) => !isPostDeleted(p))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, pageSize);
     }
 
-    const q = query(
-        collection(db, POSTS_COLLECTION),
-        where('authorId', '==', authorId),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(mapPostDoc);
+    try {
+        const q = query(
+            collection(db, POSTS_COLLECTION),
+            where('authorId', '==', authorId),
+            orderBy('createdAt', 'desc'),
+            limit(pageSize)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(mapPostDoc).filter((post) => !isPostDeleted(post));
+    } catch (error: any) {
+        // Gracefully fall back when the composite index has not been deployed yet.
+        if (error?.code !== 'failed-precondition') {
+            throw error;
+        }
+
+        const fallbackQuery = query(
+            collection(db, POSTS_COLLECTION),
+            where('authorId', '==', authorId),
+            limit(pageSize * 3)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        return fallbackSnapshot.docs
+            .map(mapPostDoc)
+            .filter((post) => !isPostDeleted(post))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, pageSize);
+    }
 };
 
 /**
@@ -175,10 +202,12 @@ export const fetchPostsByAuthor = async (authorId: string, pageSize: number = 20
 export const createPost = async (
     postData: Omit<Post, 'id' | 'createdAt' | 'viewCount' | 'commentCount' | 'likeCount'>
 ): Promise<string> => {
+    const sanitizedPostData = omitUndefined(postData);
+
     if (!isFirebaseConfigured) {
         const newPost: Post = {
             id: `local-post-${Date.now()}`,
-            ...postData,
+            ...sanitizedPostData,
             createdAt: new Date().toISOString(),
             viewCount: 0,
             commentCount: 0,
@@ -194,10 +223,10 @@ export const createPost = async (
     if (!currentUser) throw new Error('Authentication required.');
 
     const ref = await addDoc(collection(db, POSTS_COLLECTION), {
-        ...postData,
+        ...sanitizedPostData,
         authorId: currentUser.uid,
-        authorName: currentUser.displayName || postData.authorName,
-        authorAvatar: currentUser.photoURL || postData.authorAvatar || null,
+        authorName: currentUser.displayName || sanitizedPostData.authorName,
+        authorAvatar: currentUser.photoURL || sanitizedPostData.authorAvatar || null,
         createdAt: serverTimestamp(),
         viewCount: 0,
         commentCount: 0,
@@ -209,8 +238,55 @@ export const createPost = async (
 };
 
 /**
+ * Fetch a single post by ID without incrementing its viewCount.
+ * Returns null if the post does not exist.
+ */
+export const readPostById = async (postId: string): Promise<Post | null> => {
+    if (!isFirebaseConfigured) {
+        return localPosts.find((p) => p.id === postId) ?? null;
+    }
+
+    const snapshot = await getDoc(doc(db, POSTS_COLLECTION, postId));
+    if (!snapshot.exists()) return null;
+
+    const data = snapshot.data();
+    return {
+        id: snapshot.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
+    } as Post;
+};
+
+/**
+ * Update an existing post. Only the author can update.
+ */
+export const updatePost = async (
+    postId: string,
+    postData: Omit<Post, 'id' | 'createdAt' | 'viewCount' | 'commentCount' | 'likeCount' | 'status' | 'isPinned'>
+): Promise<void> => {
+    const sanitizedPostData = omitUndefined(postData);
+
+    if (!isFirebaseConfigured) {
+        localPosts = localPosts.map((post) =>
+            post.id === postId ? { ...post, ...sanitizedPostData } : post
+        );
+        return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Authentication required.');
+
+    await updateDoc(doc(db, POSTS_COLLECTION, postId), {
+        ...sanitizedPostData,
+        authorId: currentUser.uid,
+        authorName: currentUser.displayName || sanitizedPostData.authorName,
+        authorAvatar: currentUser.photoURL || sanitizedPostData.authorAvatar || null,
+    });
+};
+
+/**
  * Update the status of a post (author only).
- * Supported transitions: active → closed / sold / filled, any → active.
+ * Supported transitions: active → closed / sold / filled / rented, any → active.
  */
 export const updatePostStatus = async (postId: string, status: PostStatus): Promise<void> => {
     if (!isFirebaseConfigured) {
@@ -365,4 +441,69 @@ export const addComment = async (
     }
 
     return newCommentRef.id;
+};
+
+// --- Pinned Posts ---
+
+/**
+ * Fetch all currently pinned posts, ordered by creation date.
+ * isPinned is set exclusively via Firebase console / Admin SDK.
+ */
+export const fetchPinnedPosts = async (): Promise<Post[]> => {
+    if (!isFirebaseConfigured) {
+        return localPosts.filter((p) => p.isPinned && !isPostDeleted(p));
+    }
+
+    const q = query(
+        collection(db, POSTS_COLLECTION),
+        where('isPinned', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(mapPostDoc).filter((p) => !isPostDeleted(p));
+};
+
+// --- Deletion ---
+
+/**
+ * Mark a post as deleted (author only).
+ */
+export const deletePost = async (postId: string): Promise<void> => {
+    if (!isFirebaseConfigured) {
+        localPosts = localPosts.map((p) => (p.id === postId ? { ...p, status: 'deleted' } : p));
+        return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Authentication required.');
+
+    await updateDoc(doc(db, POSTS_COLLECTION, postId), { status: 'deleted' });
+};
+
+/**
+ * Delete a comment and atomically decrement the post's commentCount.
+ */
+export const deleteComment = async (postId: string, commentId: string): Promise<void> => {
+    if (!isFirebaseConfigured) {
+        localComments = {
+            ...localComments,
+            [postId]: (localComments[postId] ?? []).filter((c) => c.id !== commentId),
+        };
+        localPosts = localPosts.map((p) =>
+            p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p
+        );
+        return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Authentication required.');
+
+    const commentRef = doc(db, POSTS_COLLECTION, postId, 'comments', commentId);
+    const postRef = doc(db, POSTS_COLLECTION, postId);
+
+    await runTransaction(db, async (transaction) => {
+        transaction.delete(commentRef);
+        transaction.update(postRef, { commentCount: increment(-1) });
+    });
 };

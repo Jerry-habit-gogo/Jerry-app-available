@@ -110,6 +110,9 @@ export default function ProfileScreen() {
             </View>
 
             <Button title="프로필 수정" onPress={() => navigation.navigate('EditProfile')} />
+            <Button title="저장한 게시글" onPress={() => navigation.navigate('SavedPosts')} variant="outline" />
+            <Button title="최근 본 게시글" onPress={() => navigation.navigate('RecentlyViewed')} variant="outline" />
+            <Button title="차단 목록" onPress={() => navigation.navigate('BlockedUsers')} variant="outline" />
             <Button title="로그아웃" onPress={handleLogout} isLoading={isLoggingOut} variant="outline" />
           </View>
 

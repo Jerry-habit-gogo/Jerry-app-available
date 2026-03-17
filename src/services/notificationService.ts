@@ -13,7 +13,9 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
+import { sendPushToUser } from './pushNotificationService';
 import { AppNotification, NotificationData, NotificationType } from '../types';
+import { isPermissionDeniedError } from './firestoreError';
 
 const NOTIFICATIONS_ROOT = 'notifications';
 
@@ -51,6 +53,9 @@ export const createNotification = async (
     createdAt: serverTimestamp(),
     data,
   });
+
+  // Fire push in parallel (best-effort)
+  sendPushToUser(recipientId, title, body, data as Record<string, unknown>).catch(() => {});
 };
 
 /**
@@ -67,9 +72,20 @@ export const subscribeToNotifications = (
   }
 
   const q = query(itemsRef(userId), orderBy('createdAt', 'desc'), limit(50));
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map((d) => mapNotification(d.id, d.data())));
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      callback(snapshot.docs.map((d) => mapNotification(d.id, d.data())));
+    },
+    (error) => {
+      if (isPermissionDeniedError(error)) {
+        console.warn('Notifications subscription denied by Firestore rules.');
+      } else {
+        console.error('Notifications subscription failed', error);
+      }
+      callback([]);
+    }
+  );
 };
 
 /**
@@ -86,7 +102,18 @@ export const subscribeToUnreadCount = (
   }
 
   const q = query(itemsRef(userId), where('read', '==', false));
-  return onSnapshot(q, (snapshot) => callback(snapshot.size));
+  return onSnapshot(
+    q,
+    (snapshot) => callback(snapshot.size),
+    (error) => {
+      if (isPermissionDeniedError(error)) {
+        console.warn('Unread notifications subscription denied by Firestore rules.');
+      } else {
+        console.error('Unread notifications subscription failed', error);
+      }
+      callback(0);
+    }
+  );
 };
 
 /**
