@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { ReportReason } from '../types';
 import { reportContent } from '../services/moderationService';
+import { color, radius, spacing, typography } from '../theme/tokens';
 
 interface ReportModalProps {
   visible: boolean;
@@ -83,7 +84,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           <TextInput
             style={styles.input}
             placeholder="추가 설명 (선택사항)"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={color.text.placeholder}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -101,7 +102,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={color.text.inverse} />
               ) : (
                 <Text style={styles.submitText}>신고 접수</Text>
               )}
@@ -120,99 +121,99 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
+    backgroundColor: color.bg.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing[24],
     paddingBottom: 40,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 4,
+    fontSize: typography.size.sectionTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
+    marginBottom: spacing[4],
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
+    marginBottom: spacing[20],
   },
   reasonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: spacing[12],
+    paddingHorizontal: spacing[12],
+    borderRadius: radius.sm,
     marginBottom: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: color.bg.subtle,
   },
   reasonRowSelected: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: color.brand.greenLight,
     borderWidth: 1,
-    borderColor: '#2563EB',
+    borderColor: color.brand.green,
   },
   radio: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
-    marginRight: 12,
+    borderColor: color.line.default,
+    marginRight: spacing[12],
   },
   radioSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#2563EB',
+    borderColor: color.brand.green,
+    backgroundColor: color.brand.green,
   },
   reasonLabel: {
-    fontSize: 15,
-    color: '#374151',
+    fontSize: typography.size.body,
+    color: color.text.secondary,
   },
   reasonLabelSelected: {
-    color: '#1D4ED8',
-    fontWeight: '600',
+    color: color.brand.greenDark,
+    fontWeight: typography.weight.semiBold,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: '#111',
+    borderColor: color.line.default,
+    borderRadius: radius.sm,
+    padding: spacing[12],
+    fontSize: typography.size.bodySmall,
+    color: color.text.primary,
     minHeight: 72,
     textAlignVertical: 'top',
-    marginTop: 16,
-    marginBottom: 20,
+    marginTop: spacing[16],
+    marginBottom: spacing[20],
   },
   buttons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing[12],
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: color.line.default,
     alignItems: 'center',
   },
   cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.tertiary,
   },
   submitButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: '#EF4444',
+    borderRadius: radius.sm,
+    backgroundColor: color.state.error,
     alignItems: 'center',
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.inverse,
   },
 });

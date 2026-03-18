@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { radius, spacing, typography, color } from '../../theme/tokens';
 
 interface Props {
   label: string;
@@ -11,10 +12,12 @@ interface Props {
 
 export function HomeCategoryCard({ label, description, accent, icon, onPress }: Props) {
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.86} onPress={onPress}>
-      <View style={[styles.iconWrap, { backgroundColor: accent }]}>
-        <Text style={styles.icon}>{icon}</Text>
-      </View>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: accent }]}
+      activeOpacity={0.82}
+      onPress={onPress}
+    >
+      <Text style={styles.icon}>{icon}</Text>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.description} numberOfLines={2}>
         {description}
@@ -27,37 +30,23 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minWidth: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    elevation: 2,
-  },
-  iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
+    borderRadius: radius.lg,
+    padding: spacing[16],
+    minHeight: 100,
   },
   icon: {
-    fontSize: 18,
+    fontSize: 24,
+    marginBottom: spacing[8],
   },
   label: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
+    marginBottom: spacing[4],
   },
   description: {
-    fontSize: 12,
+    fontSize: typography.size.caption,
     lineHeight: 17,
-    color: '#6B7280',
+    color: color.text.secondary,
   },
 });

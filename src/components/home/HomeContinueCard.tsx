@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { color, radius, spacing, typography } from '../../theme/tokens';
 
 interface Props {
   title: string;
@@ -25,36 +26,36 @@ export function HomeContinueCard({ title, count, icon, description, onPress }: P
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#EEF2F7',
-    padding: 16,
+    borderColor: color.line.subtle,
+    padding: spacing[16],
     minHeight: 120,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing[12],
   },
   icon: {
-    fontSize: 20,
+    fontSize: spacing[20],
   },
   count: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: typography.size.screenTitle,
+    fontWeight: typography.weight.extraBold,
+    color: color.brand.green,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 6,
   },
   description: {
-    fontSize: 12,
+    fontSize: typography.size.caption,
     lineHeight: 18,
-    color: '#6B7280',
+    color: color.text.tertiary,
   },
 });

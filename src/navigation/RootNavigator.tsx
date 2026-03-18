@@ -8,12 +8,14 @@ import { CreatePostScreen } from '../screens/CreatePostScreen';
 import ChatScreen from '../screens/ChatScreen';
 import AuthScreen from '../screens/AuthScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import ProfileSettingsScreen from '../screens/ProfileSettingsScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import SavedPostsScreen from '../screens/SavedPostsScreen';
 import RecentlyViewedScreen from '../screens/RecentlyViewedScreen';
 import BrowseScreen from '../screens/BrowseScreen';
 import BlockedUsersScreen from '../screens/BlockedUsersScreen';
+import DesignPreviewScreen from '../screens/DesignPreviewScreen';
 import { ChatRoom, Post, PostFilterOptions } from '../types';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -22,6 +24,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Auth: undefined;
   EditProfile: undefined;
+  ProfileSettings: undefined;
   News: undefined;
   Announcements: undefined;
   Chat: undefined;
@@ -33,6 +36,7 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   RecentlyViewed: undefined;
   BlockedUsers: undefined;
+  DesignPreview: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -53,6 +57,12 @@ export default function RootNavigator() {
           name="EditProfile"
           component={EditProfileScreen}
           options={{ headerShown: true, title: '프로필 수정', headerBackTitle: '뒤로가기' }}
+        />
+
+        <Stack.Screen
+          name="ProfileSettings"
+          component={ProfileSettingsScreen}
+          options={{ headerShown: true, title: '설정', headerBackTitle: '뒤로가기' }}
         />
 
         {/* Reusing BoardListScreen for News and Announcements */}
@@ -127,6 +137,12 @@ export default function RootNavigator() {
           name="BlockedUsers"
           component={BlockedUsersScreen}
           options={{ headerShown: true, title: '차단 목록', headerBackTitle: '뒤로가기' }}
+        />
+
+        <Stack.Screen
+          name="DesignPreview"
+          component={DesignPreviewScreen}
+          options={{ headerShown: true, title: '디자인', headerBackTitle: '뒤로가기' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

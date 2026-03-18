@@ -14,6 +14,7 @@ import { RecentlyViewedCard } from '../components/RecentlyViewedCard';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { fetchRecentlyViewed, PostWithMeta } from '../services/userContentService';
 import { useUserStore } from '../store/userStore';
+import { color, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -74,7 +75,7 @@ export default function RecentlyViewedScreen() {
   return (
     <ScreenContainer>
       {loading ? (
-        <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+        <ActivityIndicator size="large" color={color.brand.green} style={styles.loader} />
       ) : (
         <FlatList
           data={items}
@@ -118,8 +119,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: typography.size.body,
+    color: color.text.tertiary,
     textAlign: 'center',
   },
 });

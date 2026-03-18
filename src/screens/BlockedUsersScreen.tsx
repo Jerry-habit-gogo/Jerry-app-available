@@ -14,6 +14,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import { fetchBlockedUsers, unblockUser } from '../services/moderationService';
 import { useUserStore } from '../store/userStore';
 import { Block } from '../types';
+import { color, radius, typography } from '../theme/tokens';
 
 export default function BlockedUsersScreen() {
   const { setBlockedUserIds } = useUserStore();
@@ -64,7 +65,7 @@ export default function BlockedUsersScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+        <ActivityIndicator size="large" color={color.brand.green} style={styles.loader} />
       </ScreenContainer>
     );
   }
@@ -115,8 +116,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 10,
   },
@@ -125,42 +126,42 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     marginRight: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: color.line.default,
   },
   avatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6B7280',
+    backgroundColor: color.text.secondary,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    color: color.text.inverse,
+    fontWeight: typography.weight.bold,
+    fontSize: typography.size.sectionTitle,
   },
   name: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.primary,
   },
   unblockButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: radius.xs,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: color.line.default,
   },
   unblockText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.secondary,
   },
   empty: {
     alignItems: 'center',
     marginTop: 80,
   },
   emptyText: {
-    fontSize: 15,
-    color: '#9CA3AF',
+    fontSize: typography.size.body,
+    color: color.text.tertiary,
   },
 });

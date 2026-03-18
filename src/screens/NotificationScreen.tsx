@@ -10,9 +10,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import { NotificationItem } from '../components/NotificationItem';
 import {
+  deleteAllNotifications,
+  deleteNotification,
   markAllNotificationsRead,
   markNotificationRead,
   subscribeToNotifications,
@@ -22,6 +25,7 @@ import { fetchChatRoomById } from '../services/chatService';
 import { useUserStore } from '../store/userStore';
 import { AppNotification } from '../types';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { color, radius, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -120,12 +124,46 @@ export default function NotificationScreen() {
     markAllNotificationsRead(user.id).catch(() => {});
   };
 
+  const handleDeleteNotification = (notification: AppNotification) => {
+    if (!user) return;
+
+    Alert.alert('알림 삭제', '이 알림을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          deleteNotification(user.id, notification.id).catch(() => {
+            Alert.alert('오류', '알림 삭제에 실패했습니다.');
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAll = () => {
+    if (!user || notifications.length === 0) return;
+
+    Alert.alert('전체 삭제', '모든 알림을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          deleteAllNotifications(user.id).catch(() => {
+            Alert.alert('오류', '알림 전체 삭제에 실패했습니다.');
+          });
+        },
+      },
+    ]);
+  };
+
   if (!user) {
     return (
       <ScreenContainer>
         <Text style={styles.pageTitle}>알림</Text>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <Ionicons name="notifications-outline" size={52} color={color.text.tertiary} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>로그인이 필요합니다</Text>
           <Text style={styles.emptySubtitle}>로그인 후 알림을 확인할 수 있습니다.</Text>
         </View>
@@ -140,18 +178,25 @@ export default function NotificationScreen() {
     <ScreenContainer>
       <View style={styles.header}>
         <Text style={styles.pageTitle}>알림</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>모두 읽음</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerActions}>
+          {notifications.length > 0 && (
+            <TouchableOpacity onPress={handleDeleteAll} style={styles.secondaryAction}>
+              <Text style={styles.secondaryActionText}>전체 삭제</Text>
+            </TouchableOpacity>
+          )}
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllButton}>
+              <Text style={styles.markAllText}>모두 읽음</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#2563EB" style={styles.loader} />
+        <ActivityIndicator size="large" color={color.brand.green} style={styles.loader} />
       ) : sections.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <Ionicons name="notifications-outline" size={52} color={color.text.tertiary} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>새 알림이 없습니다</Text>
           <Text style={styles.emptySubtitle}>새 메시지, 댓글, 좋아요가 오면 여기서 확인하세요.</Text>
         </View>
@@ -166,7 +211,11 @@ export default function NotificationScreen() {
             <Text style={styles.sectionHeader}>{section.title}</Text>
           )}
           renderItem={({ item }) => (
-            <NotificationItem notification={item} onPress={handleNotificationPress} />
+            <NotificationItem
+              notification={item}
+              onPress={handleNotificationPress}
+              onDelete={handleDeleteNotification}
+            />
           )}
         />
       )}
@@ -181,21 +230,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   pageTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.screenTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
+  },
+  secondaryAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.xs,
+    backgroundColor: color.bg.subtle,
+  },
+  secondaryActionText: {
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
+    fontWeight: typography.weight.medium,
   },
   markAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    borderRadius: radius.xs,
+    backgroundColor: color.brand.greenLight,
   },
   markAllText: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '600',
+    fontSize: typography.size.bodySmall,
+    color: color.brand.green,
+    fontWeight: typography.weight.semiBold,
   },
   loader: {
     marginTop: 60,
@@ -204,9 +269,9 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
+    fontSize: typography.size.caption,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.tertiary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 8,
@@ -219,18 +284,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyIcon: {
-    fontSize: 52,
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: typography.size.sectionTitle,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.secondary,
     marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: typography.size.bodySmall,
+    color: color.text.tertiary,
     textAlign: 'center',
     lineHeight: 20,
   },

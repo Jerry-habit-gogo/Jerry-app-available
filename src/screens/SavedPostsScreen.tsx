@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { fetchSavedPosts, PostWithMeta } from '../services/userContentService';
 import { useUserStore } from '../store/userStore';
 import { isPostDeleted } from '../constants/postStatus';
+import { color, radius, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -84,7 +85,7 @@ export default function SavedPostsScreen() {
   return (
     <ScreenContainer>
       {loading ? (
-        <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+        <ActivityIndicator size="large" color={color.brand.green} style={styles.loader} />
       ) : (
         <FlatList
           data={items}
@@ -130,32 +131,32 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: typography.size.body,
+    color: color.text.tertiary,
     textAlign: 'center',
   },
   deletedCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    backgroundColor: color.bg.subtle,
+    borderRadius: radius.sm,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
   },
   deletedTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#9CA3AF',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.tertiary,
     marginBottom: 6,
     textDecorationLine: 'line-through',
   },
   deletedBadge: {
-    fontSize: 12,
-    color: '#EF4444',
+    fontSize: typography.size.caption,
+    color: color.state.error,
     marginBottom: 4,
   },
   deletedMeta: {
-    fontSize: 12,
-    color: '#D1D5DB',
+    fontSize: typography.size.caption,
+    color: color.line.default,
   },
 });

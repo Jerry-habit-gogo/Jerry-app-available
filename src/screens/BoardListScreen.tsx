@@ -11,6 +11,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { Post, PostFilterOptions } from '../types';
 import { useUserStore } from '../store/userStore';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { color, radius, shadow, typography } from '../theme/tokens';
 
 interface BoardListScreenProps {
     category?: 'jobs' | 'real_estate' | 'marketplace' | 'news' | 'announcements';
@@ -70,9 +71,10 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
 
     const loadPosts = async () => {
         try {
+            const shouldLoadPinned = category === 'announcements';
             const [{ posts: fetchedPosts, lastVisible: newLastVisible }, pinned] = await Promise.all([
                 fetchPosts({ ...filters, category }, PAGE_SIZE),
-                fetchPinnedPosts(),
+                shouldLoadPinned ? fetchPinnedPosts() : Promise.resolve([]),
             ]);
             const ids = new Set(pinned.map((p) => p.id));
             setPinnedPosts(pinned);
@@ -143,7 +145,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#3b82f6" />
+                    <ActivityIndicator size="large" color={color.brand.green} />
                 </View>
             ) : (
                 <FlatList
@@ -172,7 +174,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
                     }
                     ListFooterComponent={
                         loadingMore ? (
-                            <ActivityIndicator size="small" color="#3b82f6" style={styles.footerLoader} />
+                            <ActivityIndicator size="small" color={color.brand.green} style={styles.footerLoader} />
                         ) : null
                     }
                     ListEmptyComponent={() => (
@@ -184,7 +186,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
-                            colors={['#3b82f6']}
+                            colors={[color.brand.green]}
                         />
                     }
                 />
@@ -213,9 +215,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#111',
+        fontSize: typography.size.screenTitle,
+        fontWeight: typography.weight.bold,
+        color: color.text.primary,
     },
     controls: {
         paddingHorizontal: 16,
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: 16,
-        paddingBottom: 80, // Extra padding for FAB
+        paddingBottom: 80,
     },
     emptyContainer: {
         padding: 40,
@@ -231,8 +233,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyText: {
-        color: '#888',
-        fontSize: 16,
+        color: color.text.tertiary,
+        fontSize: typography.size.body,
     },
     loadingContainer: {
         flex: 1,
@@ -243,20 +245,16 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 24,
         right: 24,
-        backgroundColor: '#3b82f6',
+        backgroundColor: color.brand.green,
         paddingVertical: 14,
         paddingHorizontal: 20,
-        borderRadius: 30,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
+        borderRadius: radius.full,
+        ...shadow.float,
     },
     fabText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: color.text.inverse,
+        fontSize: typography.size.body,
+        fontWeight: typography.weight.bold,
     },
     footerLoader: {
         paddingVertical: 16,
@@ -272,17 +270,17 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     pinnedHeaderIcon: {
-        fontSize: 14,
+        fontSize: typography.size.bodySmall,
     },
     pinnedHeaderText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#374151',
+        fontSize: typography.size.bodySmall,
+        fontWeight: typography.weight.bold,
+        color: color.text.secondary,
         letterSpacing: 0.2,
     },
     pinnedDivider: {
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: color.line.default,
         marginVertical: 12,
     },
 });

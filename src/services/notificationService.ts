@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   limit,
@@ -142,5 +143,25 @@ export const markAllNotificationsRead = async (userId: string): Promise<void> =>
 
   const batch = writeBatch(db);
   snapshot.docs.forEach((d) => batch.update(d.ref, { read: true }));
+  await batch.commit();
+};
+
+export const deleteNotification = async (
+  userId: string,
+  notificationId: string
+): Promise<void> => {
+  if (!isFirebaseConfigured) return;
+
+  await deleteDoc(doc(db, NOTIFICATIONS_ROOT, userId, 'items', notificationId));
+};
+
+export const deleteAllNotifications = async (userId: string): Promise<void> => {
+  if (!isFirebaseConfigured) return;
+
+  const snapshot = await getDocs(query(itemsRef(userId), limit(100)));
+  if (snapshot.empty) return;
+
+  const batch = writeBatch(db);
+  snapshot.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
 };

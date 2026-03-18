@@ -11,17 +11,20 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useHeaderHeight } from '@react-navigation/elements';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import ScreenContainer from '../components/ScreenContainer';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { updateCurrentUserProfile } from '../services/profileService';
 import { useUserStore } from '../store/userStore';
+import { color, radius, typography } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditProfile'>;
 
 export default function EditProfileScreen({ navigation }: Props) {
   const { user, setUser } = useUserStore();
+  const headerHeight = useHeaderHeight();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
@@ -94,7 +97,8 @@ export default function EditProfileScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.keyboardContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <ScreenContainer scrollable>
         <View style={styles.card}>
@@ -160,14 +164,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: typography.size.screenTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 20,
   },
   previewContainer: {
@@ -178,29 +182,29 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: color.line.default,
   },
   avatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: color.brand.green,
   },
   avatarText: {
-    color: '#fff',
+    color: color.text.inverse,
     fontSize: 34,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
   },
   editBadge: {
     marginTop: 8,
-    backgroundColor: '#3b82f6',
+    backgroundColor: color.brand.green,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radius.sm,
   },
   editBadgeText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
+    color: color.text.inverse,
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.semiBold,
   },
   bioInput: {
     minHeight: 110,

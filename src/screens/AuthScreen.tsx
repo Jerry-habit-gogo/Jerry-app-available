@@ -9,12 +9,14 @@ import {
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useHeaderHeight } from '@react-navigation/elements';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import ScreenContainer from '../components/ScreenContainer';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { signInWithEmail, signUpWithEmail } from '../services/authService';
 import { isFirebaseConfigured } from '../services/firebase';
+import { color, radius, typography } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
@@ -41,6 +43,7 @@ const mapAuthErrorMessage = (error: unknown) => {
 };
 
 export default function AuthScreen({ navigation }: Props) {
+  const headerHeight = useHeaderHeight();
   const [mode, setMode] = useState<'sign_in' | 'sign_up'>('sign_in');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -74,7 +77,8 @@ export default function AuthScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.keyboardContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <ScreenContainer scrollable>
         <View style={styles.card}>
@@ -145,30 +149,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 20,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: typography.size.display,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
     marginTop: 8,
     marginBottom: 16,
   },
   noticeBox: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 8,
+    backgroundColor: color.state.warningLight,
+    borderRadius: radius.xs,
     padding: 12,
     marginBottom: 12,
   },
   noticeText: {
-    fontSize: 13,
-    color: '#92400E',
+    fontSize: typography.size.bodySmall,
+    color: color.state.warning,
     lineHeight: 18,
   },
   modeSwitch: {
@@ -176,8 +180,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modeSwitchText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: color.brand.green,
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.semiBold,
   },
 });

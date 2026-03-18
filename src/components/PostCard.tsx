@@ -4,6 +4,7 @@ import { Post } from '../types';
 import Card from './Card';
 import { PostStatusBadge } from './PostStatusBadge';
 import { getPostStatus, isPostActive } from '../constants/postStatus';
+import { color, radius, spacing, typography } from '../theme/tokens';
 
 interface PostCardProps {
     post: Post;
@@ -90,31 +91,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
 
 const styles = StyleSheet.create({
     cardContainer: {
-        marginBottom: 12,
-        padding: 16,
+        marginBottom: spacing[12],
+        padding: spacing[16],
     },
     pinnedCard: {
         borderLeftWidth: 3,
-        borderLeftColor: '#2563EB',
+        borderLeftColor: color.brand.blue,
     },
     pinnedBanner: {
-        backgroundColor: '#EFF6FF',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        backgroundColor: color.brand.greenLight,
+        borderRadius: radius.xs,
+        paddingHorizontal: spacing[8],
+        paddingVertical: spacing[4],
         alignSelf: 'flex-start',
         marginBottom: 10,
     },
     pinnedText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#2563EB',
+        fontSize: typography.size.micro,
+        fontWeight: typography.weight.bold,
+        color: color.brand.greenDark,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: spacing[12],
     },
     headerRight: {
         flexDirection: 'row',
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     titleDimmed: {
-        color: '#9CA3AF',
+        color: color.text.tertiary,
     },
     authorInfo: {
         flexDirection: 'row',
@@ -132,75 +133,75 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        marginRight: 8,
+        marginRight: spacing[8],
     },
     placeholderAvatar: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: color.brand.green,
         justifyContent: 'center',
         alignItems: 'center',
     },
     placeholderAvatarText: {
-        color: '#ffffff',
-        fontWeight: 'bold',
-        fontSize: 14,
+        color: color.text.inverse,
+        fontWeight: typography.weight.bold,
+        fontSize: typography.size.bodySmall,
     },
     authorName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: typography.size.bodySmall,
+        fontWeight: typography.weight.semiBold,
+        color: color.text.primary,
     },
     timeText: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: typography.size.caption,
+        color: color.text.tertiary,
     },
     title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#111',
-        marginBottom: 8,
+        fontSize: typography.size.body,
+        fontWeight: typography.weight.bold,
+        color: color.text.primary,
+        marginBottom: spacing[8],
     },
     preview: {
-        fontSize: 14,
-        color: '#555',
+        fontSize: typography.size.bodySmall,
+        color: color.text.secondary,
         lineHeight: 20,
-        marginBottom: 12,
+        marginBottom: spacing[12],
     },
     price: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#10b981', // green for price
-        marginBottom: 12,
+        fontSize: typography.size.body,
+        fontWeight: typography.weight.bold,
+        color: color.brand.green,
+        marginBottom: spacing[12],
     },
     metaRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 12,
+        gap: spacing[8],
+        marginBottom: spacing[12],
     },
     metaText: {
-        fontSize: 12,
-        color: '#2563EB',
-        backgroundColor: '#EFF6FF',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 999,
+        fontSize: typography.size.caption,
+        color: color.brand.greenDark,
+        backgroundColor: color.brand.greenLight,
+        paddingHorizontal: spacing[8],
+        paddingVertical: spacing[4],
+        borderRadius: radius.full,
     },
     imagePreview: {
         width: '100%',
         height: 150,
-        borderRadius: 8,
-        marginBottom: 12,
-        backgroundColor: '#f0f0f0',
+        borderRadius: radius.xs,
+        marginBottom: spacing[12],
+        backgroundColor: color.line.subtle,
     },
     footer: {
         flexDirection: 'row',
-        gap: 16,
+        gap: spacing[16],
         borderTopWidth: 1,
-        borderTopColor: '#eee',
-        paddingTop: 12,
+        borderTopColor: color.line.subtle,
+        paddingTop: spacing[12],
     },
     footerText: {
-        fontSize: 13,
-        color: '#666',
+        fontSize: typography.size.bodySmall,
+        color: color.text.secondary,
     },
 });

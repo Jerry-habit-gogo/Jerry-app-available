@@ -15,6 +15,7 @@ import { subscribeToUserChats } from '../services/chatService';
 import { ChatRoom } from '../types';
 import { useUserStore } from '../store/userStore';
 import Button from '../components/Button';
+import { color, radius, typography, shadow } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -136,9 +137,9 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: typography.size.screenTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 12,
   },
   listContent: {
@@ -146,26 +147,27 @@ const styles = StyleSheet.create({
   },
   chatCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
+    ...shadow.soft,
   },
   avatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: color.line.default,
   },
   avatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: color.brand.green,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 20,
+    color: color.text.inverse,
+    fontWeight: typography.weight.bold,
+    fontSize: typography.size.sectionTitle,
   },
   chatMeta: {
     flex: 1,
@@ -183,19 +185,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chatTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
   },
   chatTitleUnread: {
-    color: '#1D4ED8',
+    color: color.brand.green,
   },
   chatDate: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: typography.size.caption,
+    color: color.text.tertiary,
   },
   unreadBadge: {
-    backgroundColor: '#EF4444',
+    backgroundColor: color.state.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -204,40 +206,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   unreadBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
+    color: color.text.inverse,
   },
   postTitle: {
-    fontSize: 13,
-    color: '#2563EB',
+    fontSize: typography.size.bodySmall,
+    color: color.brand.green,
     marginBottom: 4,
   },
   lastMessage: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
   },
   lastMessageUnread: {
-    fontWeight: '600',
-    color: '#111',
+    fontWeight: typography.weight.semiBold,
+    color: color.text.primary,
   },
   emptyState: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 20,
     alignItems: 'center',
     marginTop: 12,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
     textAlign: 'center',
   },
 });

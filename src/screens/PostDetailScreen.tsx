@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import ScreenContainer from '../components/ScreenContainer';
 import { CommentSection } from '../components/CommentSection';
 import { ReportModal } from '../components/ReportModal';
+import { ActionSheet, ActionSheetItem } from '../components/ActionSheet';
 import {
     fetchPostById,
     readPostById,
@@ -27,6 +28,7 @@ import {
 } from '../services/userContentService';
 import { useUserStore } from '../store/userStore';
 import { Comment, Post, PostStatus } from '../types';
+import { color, radius, typography } from '../theme/tokens';
 import {
     getPostStatus,
     isPostActive,
@@ -36,6 +38,24 @@ import {
 } from '../constants/postStatus';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostDetail'>;
+
+const CATEGORY_STATUS_ACTIONS: Record<Post['category'], Array<{ label: string; status: PostStatus }>> = {
+    jobs: [
+        { label: '충원완료로 변경', status: 'filled' },
+    ],
+    real_estate: [
+        { label: '임대완료로 변경', status: 'rented' },
+    ],
+    marketplace: [
+        { label: '판매완료로 변경', status: 'sold' },
+    ],
+    news: [
+        { label: '마감으로 변경', status: 'closed' },
+    ],
+    announcements: [
+        { label: '마감으로 변경', status: 'closed' },
+    ],
+};
 
 export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     const { post: routePost } = route.params;
@@ -52,6 +72,7 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     const [commentCount, setCommentCount] = useState(routePost.commentCount);
     const [reportVisible, setReportVisible] = useState(false);
     const [reportCommentTarget, setReportCommentTarget] = useState<Comment | null>(null);
+    const [manageSheetVisible, setManageSheetVisible] = useState(false);
     const hasTrackedInitialViewRef = useRef(false);
 
     const isAuthor = !!user && user.id === post.authorId;
@@ -252,26 +273,7 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             navigation.navigate('Auth');
             return;
         }
-
-        if (isAuthor) {
-            const currentLabel = POST_STATUS_LABELS[currentStatus];
-            Alert.alert('게시글 관리', `현재 상태: ${currentLabel}`, [
-                { text: '게시글 수정', onPress: () => navigation.navigate('CreatePost', { post }) },
-                { text: '마감으로 변경', onPress: () => handleUpdateStatus('closed') },
-                { text: '판매완료로 변경', onPress: () => handleUpdateStatus('sold') },
-                { text: '충원완료로 변경', onPress: () => handleUpdateStatus('filled') },
-                { text: '임대완료로 변경', onPress: () => handleUpdateStatus('rented') },
-                { text: '다시 활성화', onPress: () => handleUpdateStatus('active') },
-                { text: '게시글 삭제', style: 'destructive', onPress: handleDeletePost },
-                { text: '취소', style: 'cancel' },
-            ]);
-        } else {
-            Alert.alert('', '', [
-                { text: '이 게시글 신고하기', onPress: () => setReportVisible(true) },
-                { text: '작성자 차단하기', style: 'destructive', onPress: handleBlockAuthor },
-                { text: '취소', style: 'cancel' },
-            ]);
-        }
+        setManageSheetVisible(true);
     };
 
     const handleUpdateStatus = async (status: PostStatus) => {
@@ -320,6 +322,22 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         : !isActive
             ? `${statusLabel} 상태의 게시글에는 댓글을 작성할 수 없습니다.`
             : undefined;
+
+    const manageSheetItems: ActionSheetItem[] = isAuthor
+        ? [
+            { label: '게시글 수정', onPress: () => navigation.navigate('CreatePost', { post }) },
+            ...CATEGORY_STATUS_ACTIONS[post.category]
+                .filter((item) => item.status !== currentStatus)
+                .map((item) => ({ label: item.label, onPress: () => handleUpdateStatus(item.status) })),
+            ...(currentStatus !== 'active'
+                ? [{ label: '다시 활성화', onPress: () => handleUpdateStatus('active') }]
+                : []),
+            { label: '게시글 삭제', onPress: handleDeletePost, tone: 'destructive' as const },
+        ]
+        : [
+            { label: '이 게시글 신고하기', onPress: () => setReportVisible(true) },
+            { label: '작성자 차단하기', onPress: handleBlockAuthor, tone: 'destructive' as const },
+        ];
 
     return (
         <ScreenContainer scrollable={true}>
@@ -448,14 +466,25 @@ export const PostDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 postId={post.id}
                 onClose={() => setReportCommentTarget(null)}
             />
+            <ActionSheet
+                visible={manageSheetVisible}
+                title={isAuthor ? '게시글 관리' : '게시글 옵션'}
+                subtitle={
+                    isAuthor
+                        ? `현재 상태: ${statusLabel}`
+                        : `${post.authorName}님의 게시글에 대한 옵션입니다.`
+                }
+                items={manageSheetItems}
+                onClose={() => setManageSheetVisible(false)}
+            />
         </ScreenContainer>
     );
 };
 
 const styles = StyleSheet.create({
     postContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        backgroundColor: color.bg.surface,
+        borderRadius: radius.lg,
         padding: 16,
         marginBottom: 8,
     },
@@ -476,23 +505,23 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     placeholderAvatar: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: color.brand.green,
         justifyContent: 'center',
         alignItems: 'center',
     },
     placeholderAvatarText: {
-        color: '#ffffff',
-        fontWeight: 'bold',
-        fontSize: 16,
+        color: color.text.inverse,
+        fontWeight: typography.weight.bold,
+        fontSize: typography.size.body,
     },
     authorName: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: typography.size.body,
+        fontWeight: typography.weight.semiBold,
+        color: color.text.primary,
     },
     dateText: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: typography.size.caption,
+        color: color.text.tertiary,
         marginTop: 2,
     },
     headerRight: {
@@ -501,106 +530,106 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     categoryBadge: {
-        backgroundColor: '#f3f4f6',
+        backgroundColor: color.bg.subtle,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 4,
     },
     categoryText: {
         fontSize: 10,
-        fontWeight: 'bold',
-        color: '#4b5563',
+        fontWeight: typography.weight.bold,
+        color: color.text.secondary,
     },
     moreButton: {
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     moreButtonText: {
-        fontSize: 16,
-        color: '#6B7280',
+        fontSize: typography.size.body,
+        color: color.text.secondary,
         letterSpacing: 2,
     },
     statusBanner: {
         alignSelf: 'flex-start',
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: radius.xs,
         marginBottom: 12,
     },
     statusBannerText: {
-        fontSize: 13,
-        fontWeight: '700',
+        fontSize: typography.size.bodySmall,
+        fontWeight: typography.weight.bold,
     },
     title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#111',
+        fontSize: typography.size.screenTitle,
+        fontWeight: typography.weight.bold,
+        color: color.text.primary,
         marginBottom: 12,
     },
     price: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#10b981',
+        fontSize: typography.size.sectionTitle,
+        fontWeight: typography.weight.bold,
+        color: color.brand.green,
         marginBottom: 16,
     },
     mainImage: {
         width: '100%',
         height: 250,
-        borderRadius: 8,
+        borderRadius: radius.xs,
         marginBottom: 16,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: color.bg.subtle,
     },
     content: {
-        fontSize: 16,
-        color: '#444',
+        fontSize: typography.size.body,
+        color: color.text.secondary,
         lineHeight: 24,
         marginBottom: 24,
     },
     deletedState: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: color.bg.subtle,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 10,
+        borderColor: color.line.default,
+        borderRadius: radius.sm,
         padding: 16,
         marginBottom: 8,
     },
     deletedTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
+        fontSize: typography.size.sectionTitle,
+        fontWeight: typography.weight.bold,
+        color: color.text.primary,
         marginBottom: 6,
     },
     deletedDescription: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: typography.size.bodySmall,
+        color: color.text.secondary,
         lineHeight: 20,
     },
     statsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: color.line.subtle,
         paddingTop: 16,
     },
     chatAction: {
         marginBottom: 8,
     },
     actionHint: {
-        fontSize: 12,
-        color: '#9CA3AF',
+        fontSize: typography.size.caption,
+        color: color.text.tertiary,
         marginTop: 8,
     },
     statsText: {
-        fontSize: 13,
-        color: '#6b7280',
+        fontSize: typography.size.bodySmall,
+        color: color.text.secondary,
         marginRight: 8,
     },
     likeButton: {
         padding: 4,
     },
     likedText: {
-        color: '#ef4444',
-        fontWeight: 'bold',
+        color: color.state.error,
+        fontWeight: typography.weight.bold,
     },
     statsSpacer: {
         flex: 1,
@@ -610,9 +639,9 @@ const styles = StyleSheet.create({
     },
     saveIcon: {
         fontSize: 20,
-        color: '#9CA3AF',
+        color: color.text.tertiary,
     },
     savedIcon: {
-        color: '#F59E0B',
+        color: color.state.warning,
     },
 });

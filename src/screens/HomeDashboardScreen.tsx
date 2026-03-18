@@ -1,40 +1,41 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
+import { SideMenuDrawer, SideMenuItem } from '../components/SideMenuDrawer';
 import { HomeSectionHeader } from '../components/home/HomeSectionHeader';
 import { HomeCategoryCard } from '../components/home/HomeCategoryCard';
 import { HomeCompactPostCard } from '../components/home/HomeCompactPostCard';
 import { HomeContinueCard } from '../components/home/HomeContinueCard';
+import { HomeAdSlot } from '../components/home/HomeAdSlot';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import {
   fetchHomeDashboardData,
-  HOME_REGION_OPTIONS,
   HomeDashboardData,
-  HomeRegion,
 } from '../services/homeService';
 import { useUserStore } from '../store/userStore';
 import { Post } from '../types';
+import { color, radius, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const QUICK_ACCESS_ITEMS = [
-  { key: 'jobs', label: 'Jobs', description: '일자리와 채용 공고를 확인하세요', icon: '💼', accent: '#E0ECFF' },
-  { key: 'real_estate', label: 'Real Estate', description: '집, 방, 렌트 정보를 살펴보세요', icon: '🏠', accent: '#DCFCE7' },
-  { key: 'marketplace', label: 'Marketplace', description: '중고 물품과 생활 거래를 찾으세요', icon: '🛍️', accent: '#FEF3C7' },
-  { key: 'news', label: 'News', description: '지역 소식과 업데이트를 빠르게 확인하세요', icon: '📰', accent: '#FCE7F3' },
-  { key: 'announcements', label: 'Announcements', description: '공지와 필수 안내를 한눈에 확인하세요', icon: '📌', accent: '#EDE9FE' },
+  { key: 'jobs', label: 'Jobs', description: '일자리와 채용 공고를 확인하세요', icon: '💼', accent: color.brand.blueLight },
+  { key: 'real_estate', label: 'Real Estate', description: '집, 방, 렌트 정보를 살펴보세요', icon: '🏠', accent: color.brand.greenLight },
+  { key: 'marketplace', label: 'Marketplace', description: '중고 물품과 생활 거래를 찾으세요', icon: '🛍️', accent: color.brand.sandLight },
+  { key: 'news', label: 'News', description: '지역 소식과 업데이트를 빠르게 확인하세요', icon: '📰', accent: color.state.errorLight },
+  { key: 'announcements', label: 'Announcements', description: '공지와 필수 안내를 한눈에 확인하세요', icon: '📌', accent: color.state.warningLight },
 ] as const;
 
 const categoryTitles: Record<string, string> = {
@@ -60,10 +61,9 @@ export default function HomeDashboardScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, blockedUserIds, unreadNotificationCount } = useUserStore();
   const [dashboard, setDashboard] = useState<HomeDashboardData>(emptyDashboardData);
-  const [selectedRegion, setSelectedRegion] = useState<HomeRegion>('All');
-  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const removeBlocked = useCallback(
     (posts: Post[]) =>
@@ -75,7 +75,7 @@ export default function HomeDashboardScreen() {
 
   const loadDashboard = useCallback(async () => {
     try {
-      const data = await fetchHomeDashboardData(user?.id, selectedRegion);
+      const data = await fetchHomeDashboardData(user?.id, 'All');
       setDashboard({
         latestJobs: removeBlocked(data.latestJobs),
         latestRealEstate: removeBlocked(data.latestRealEstate),
@@ -92,7 +92,7 @@ export default function HomeDashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [blockedUserIds, removeBlocked, selectedRegion, user?.id]);
+  }, [blockedUserIds, removeBlocked, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -100,42 +100,12 @@ export default function HomeDashboardScreen() {
     }, [loadDashboard])
   );
 
-  const openRegionPicker = () => {
-    Alert.alert(
-      '지역 선택',
-      '홈에서 우선 볼 지역을 선택하세요.',
-      [
-        ...HOME_REGION_OPTIONS.map((option) => ({
-          text: option === 'All' ? '전체 지역' : option,
-          onPress: () => {
-            setLoading(true);
-            setSelectedRegion(option);
-          },
-        })),
-        { text: '취소', style: 'cancel' as const },
-      ]
-    );
-  };
-
-  const handleSearchSubmit = () => {
-    const trimmed = searchText.trim();
-    navigation.navigate('Browse', {
-      title: trimmed ? `"${trimmed}" 검색 결과` : '전체 게시글',
-      initialFilters: {
-        searchText: trimmed || undefined,
-        region: selectedRegion === 'All' ? undefined : selectedRegion,
-        sortBy: 'latest',
-      },
-    });
-  };
-
   const openCategory = (category: Post['category']) => {
     navigation.navigate('Browse', {
       title: categoryTitles[category],
       category,
       initialFilters: {
         category,
-        region: selectedRegion === 'All' ? undefined : selectedRegion,
         sortBy: 'latest',
       },
     });
@@ -149,7 +119,6 @@ export default function HomeDashboardScreen() {
       category,
       initialFilters: {
         category,
-        region: selectedRegion === 'All' ? undefined : selectedRegion,
         sortBy: 'latest',
       },
     });
@@ -157,17 +126,25 @@ export default function HomeDashboardScreen() {
 
   const recommendationSubtitle = useMemo(() => {
     if (!user) return '로그인하면 최근 활동을 바탕으로 더 맞는 추천을 보여드립니다.';
-    if (selectedRegion !== 'All') return `${selectedRegion} 중심으로 맞춤 추천을 보여드려요.`;
     return '최근 본 글과 저장한 글을 바탕으로 맞춤 추천을 모았습니다.';
-  }, [selectedRegion, user]);
+  }, [user]);
 
   const handleLoginPrompt = () => navigation.navigate('Auth');
+
+  const menuItems: SideMenuItem[] = [
+    { label: '구인구직', onPress: () => openSection('구인구직', 'jobs') },
+    { label: '부동산', onPress: () => openSection('부동산', 'real_estate') },
+    { label: '중고장터', onPress: () => openSection('중고장터', 'marketplace') },
+    { label: '뉴스', onPress: () => navigation.navigate('News') },
+    { label: '새 소식', onPress: () => navigation.navigate('Announcements') },
+    { label: '디자인', onPress: () => navigation.navigate('DesignPreview') },
+  ];
 
   return (
     <ScreenContainer useSafeArea scrollable={false}>
       {loading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={color.brand.green} />
         </View>
       ) : (
         <ScrollView
@@ -180,25 +157,28 @@ export default function HomeDashboardScreen() {
                 setRefreshing(true);
                 loadDashboard();
               }}
-              tintColor="#2563EB"
+              tintColor={color.brand.green}
             />
           }
         >
-          <View style={styles.hero}>
-            <View style={styles.heroGlow} />
-            <View style={styles.topBar}>
-              <View>
-                <Text style={styles.greeting}>
-                  {user?.displayName ? `${user.displayName}님을 위한 Jerry` : 'Jerry 서비스 홈'}
-                </Text>
-                <Text style={styles.subtitle}>오늘 필요한 정보와 서비스만 빠르게 확인하세요.</Text>
-              </View>
+          <View style={styles.appHeader}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => setMenuVisible(true)}
+              activeOpacity={0.82}
+            >
+              <BlurView intensity={80} tint="light" style={styles.glassBg} />
+              <Ionicons name="menu-outline" size={24} color={color.text.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.appHeaderRight}>
               <TouchableOpacity
-                style={styles.notificationButton}
+                style={styles.iconButton}
                 onPress={() => navigation.navigate('Notifications')}
                 activeOpacity={0.82}
               >
-                <Text style={styles.notificationIcon}>🔔</Text>
+                <BlurView intensity={80} tint="light" style={styles.glassBg} />
+                <Ionicons name="notifications-outline" size={22} color={color.text.primary} />
                 {unreadNotificationCount > 0 ? (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -208,23 +188,59 @@ export default function HomeDashboardScreen() {
                 ) : null}
               </TouchableOpacity>
             </View>
+          </View>
 
-            <View style={styles.searchRow}>
-              <View style={styles.searchBox}>
-                <TextInput
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  onSubmitEditing={handleSearchSubmit}
-                  placeholder="찾고 싶은 글이나 서비스를 검색하세요"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.searchInput}
-                  returnKeyType="search"
-                />
-              </View>
-              <TouchableOpacity style={styles.regionButton} onPress={openRegionPicker} activeOpacity={0.82}>
-                <Text style={styles.regionLabel}>{selectedRegion === 'All' ? '전체 지역' : selectedRegion}</Text>
-              </TouchableOpacity>
+          <View style={styles.hero}>
+            <View style={styles.heroGlow} />
+            <View style={styles.heroCopy}>
+              <Text style={styles.greeting}>
+                {user?.displayName ? `${user.displayName}님을 위한 Jerry` : 'Jerry 서비스 홈'}
+              </Text>
+              <Text style={styles.subtitle}>오늘 필요한 정보와 서비스만 빠르게 확인하세요.</Text>
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <HomeAdSlot />
+          </View>
+
+          <View style={styles.section}>
+            <HomeSectionHeader title="News" actionLabel="전체보기" onPressAction={() => navigation.navigate('News')} />
+            {dashboard.newsSummary.length > 0 ? (
+              dashboard.newsSummary.map((post) => (
+                <TouchableOpacity key={post.id} style={styles.newsRow} onPress={() => openPost(post)} activeOpacity={0.82}>
+                  <Text style={styles.newsTitle} numberOfLines={2}>{post.title}</Text>
+                  <Text style={styles.newsMeta} numberOfLines={1}>
+                    {[post.region, `${post.viewCount} views`].filter(Boolean).join(' · ')}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardTitle}>새로운 뉴스가 없습니다</Text>
+                <Text style={styles.emptyCardText}>지역 소식이 올라오면 요약 형태로 모아드립니다.</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <HomeSectionHeader title="새 소식" actionLabel="전체보기" onPressAction={() => navigation.navigate('Announcements')} />
+            {dashboard.pinnedAnnouncements.length > 0 ? (
+              dashboard.pinnedAnnouncements.map((post) => (
+                <TouchableOpacity key={post.id} style={styles.announcementRow} onPress={() => openPost(post)} activeOpacity={0.82}>
+                  <Text style={styles.announcementTag}>공지</Text>
+                  <Text style={styles.announcementTitle} numberOfLines={2}>{post.title}</Text>
+                  <Text style={styles.announcementMeta} numberOfLines={1}>
+                    {[post.region, post.authorName].filter(Boolean).join(' · ')}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardTitle}>등록된 공지가 없습니다</Text>
+                <Text style={styles.emptyCardText}>중요 공지가 올라오면 이곳에서 먼저 보여드립니다.</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -355,47 +371,14 @@ export default function HomeDashboardScreen() {
               ))}
             </ScrollView>
           </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="Pinned Announcements" actionLabel="전체보기" onPressAction={() => navigation.navigate('Announcements')} />
-            {dashboard.pinnedAnnouncements.length > 0 ? (
-              dashboard.pinnedAnnouncements.map((post) => (
-                <TouchableOpacity key={post.id} style={styles.announcementRow} onPress={() => openPost(post)} activeOpacity={0.82}>
-                  <Text style={styles.announcementTag}>공지</Text>
-                  <Text style={styles.announcementTitle} numberOfLines={2}>{post.title}</Text>
-                  <Text style={styles.announcementMeta} numberOfLines={1}>
-                    {[post.region, post.authorName].filter(Boolean).join(' · ')}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>등록된 공지가 없습니다</Text>
-                <Text style={styles.emptyCardText}>중요 공지가 올라오면 이곳에서 먼저 보여드립니다.</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="News Summary" actionLabel="전체보기" onPressAction={() => navigation.navigate('News')} />
-            {dashboard.newsSummary.length > 0 ? (
-              dashboard.newsSummary.map((post) => (
-                <TouchableOpacity key={post.id} style={styles.newsRow} onPress={() => openPost(post)} activeOpacity={0.82}>
-                  <Text style={styles.newsTitle} numberOfLines={2}>{post.title}</Text>
-                  <Text style={styles.newsMeta} numberOfLines={1}>
-                    {[post.region, `${post.viewCount} views`].filter(Boolean).join(' · ')}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>새로운 뉴스가 없습니다</Text>
-                <Text style={styles.emptyCardText}>지역 소식이 올라오면 요약 형태로 모아드립니다.</Text>
-              </View>
-            )}
-          </View>
         </ScrollView>
       )}
+      <SideMenuDrawer
+        visible={menuVisible}
+        title="메뉴"
+        items={menuItems}
+        onClose={() => setMenuVisible(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -409,14 +392,24 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 40,
   },
+  appHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  appHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   hero: {
-    backgroundColor: '#F8FBFF',
-    borderRadius: 28,
+    backgroundColor: color.bg.subtle,
+    borderRadius: radius.xl,
     padding: 20,
     marginBottom: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E5EEF8',
+    borderColor: color.line.default,
   },
   heroGlow: {
     position: 'absolute',
@@ -425,87 +418,58 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: '#DCEBFF',
+    backgroundColor: color.brand.greenLight,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 18,
+  heroCopy: {
+    paddingRight: 52,
   },
   greeting: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: typography.size.display,
+    fontWeight: typography.weight.extraBold,
+    color: color.text.primary,
     marginBottom: 6,
     lineHeight: 34,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    maxWidth: 260,
-  },
-  notificationButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
   },
-  notificationIcon: {
-    fontSize: 18,
+  glassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  subtitle: {
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
+    lineHeight: 20,
   },
   notificationBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#EF4444',
+    top: 6,
+    right: 8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: color.state.error,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
   },
   notificationBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  searchBox: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: 10,
-    paddingHorizontal: 16,
-  },
-  searchInput: {
-    minHeight: 52,
-    fontSize: 15,
-    color: '#111827',
-  },
-  regionButton: {
-    minHeight: 52,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  regionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: typography.weight.bold,
+    color: color.text.inverse,
   },
   section: {
     marginBottom: 28,
@@ -527,53 +491,53 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   previewLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.text.secondary,
     marginTop: 8,
     marginBottom: 8,
   },
   loginPrompt: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
     padding: 18,
   },
   loginPromptTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 6,
   },
   loginPromptText: {
-    fontSize: 13,
+    fontSize: typography.size.bodySmall,
     lineHeight: 19,
-    color: '#6B7280',
+    color: color.text.secondary,
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
     padding: 18,
   },
   emptyCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 6,
   },
   emptyCardText: {
-    fontSize: 13,
+    fontSize: typography.size.bodySmall,
     lineHeight: 19,
-    color: '#6B7280',
+    color: color.text.secondary,
   },
   announcementRow: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
     padding: 16,
     marginBottom: 10,
   },
@@ -581,41 +545,41 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: '#EEF2FF',
-    color: '#4338CA',
-    fontSize: 11,
-    fontWeight: '700',
+    borderRadius: radius.full,
+    backgroundColor: color.brand.greenLight,
+    color: color.brand.greenDark,
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
     marginBottom: 10,
   },
   announcementTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     lineHeight: 20,
     marginBottom: 6,
   },
   announcementMeta: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: typography.size.caption,
+    color: color.text.secondary,
   },
   newsRow: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: color.line.default,
     padding: 16,
     marginBottom: 10,
   },
   newsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     lineHeight: 20,
     marginBottom: 6,
   },
   newsMeta: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: typography.size.caption,
+    color: color.text.secondary,
   },
 });

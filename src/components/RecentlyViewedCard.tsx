@@ -10,6 +10,7 @@ import { Post } from '../types';
 import { PostWithMeta } from '../services/userContentService';
 import { PostStatusBadge } from './PostStatusBadge';
 import { getPostStatus, isPostActive, isPostDeleted } from '../constants/postStatus';
+import { color, radius, shadow, spacing, typography } from '../theme/tokens';
 
 interface Props {
   item: PostWithMeta;
@@ -138,33 +139,29 @@ export function RecentlyViewedCard({ item, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.sm,
+    padding: spacing[12],
+    marginBottom: spacing[8],
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderColor: color.line.subtle,
+    ...shadow.soft,
   },
   deletedCard: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: color.bg.subtle,
+    borderColor: color.line.default,
   },
   inactiveCard: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: color.bg.subtle,
   },
   thumbnailBox: {
-    marginRight: 12,
+    marginRight: spacing[12],
   },
   thumbnail: {
     width: 64,
     height: 64,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    borderRadius: radius.xs,
+    backgroundColor: color.line.subtle,
   },
   thumbnailDimmed: {
     opacity: 0.5,
@@ -175,19 +172,19 @@ const styles = StyleSheet.create({
   thumbnailPlaceholder: {
     width: 64,
     height: 64,
-    borderRadius: 8,
-    backgroundColor: '#E0F2FE',
+    borderRadius: radius.xs,
+    backgroundColor: color.brand.blueLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   thumbnailPlaceholderDimmed: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: color.line.subtle,
     opacity: 0.6,
   },
   thumbnailPlaceholderText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#3B82F6',
+    fontSize: typography.size.sectionTitle,
+    fontWeight: typography.weight.bold,
+    color: color.brand.blue,
   },
   info: {
     flex: 1,
@@ -201,68 +198,68 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.semiBold,
+    color: color.text.primary,
     lineHeight: 20,
   },
   titleDimmed: {
-    color: '#9CA3AF',
+    color: color.text.tertiary,
   },
   titleDeleted: {
-    color: '#9CA3AF',
+    color: color.text.tertiary,
     textDecorationLine: 'line-through',
   },
   deletedBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: color.state.errorLight,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radius.xs,
     flexShrink: 0,
   },
   deletedBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#EF4444',
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
+    color: color.state.error,
   },
   tagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: spacing[4],
   },
   categoryTag: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: color.brand.greenLight,
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 999,
+    borderRadius: radius.full,
   },
   categoryTagText: {
-    fontSize: 11,
-    color: '#2563EB',
-    fontWeight: '600',
+    fontSize: typography.size.micro,
+    color: color.brand.greenDark,
+    fontWeight: typography.weight.semiBold,
   },
   regionText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: typography.size.caption,
+    color: color.text.tertiary,
   },
   price: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#10B981',
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.state.success,
     marginBottom: 3,
   },
   priceDimmed: {
-    color: '#9CA3AF',
+    color: color.text.tertiary,
   },
   priceDeleted: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#D1D5DB',
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.neutral[300],
     marginBottom: 3,
   },
   viewedAt: {
-    fontSize: 11,
-    color: '#D1D5DB',
+    fontSize: typography.size.micro,
+    color: color.neutral[300],
   },
 });

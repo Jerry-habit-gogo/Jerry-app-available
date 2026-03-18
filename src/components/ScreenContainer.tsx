@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ViewProps, ScrollView } from 'react-native';
+import { View, StyleSheet, ViewProps, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { color, spacing } from '../theme/tokens';
 
 interface ScreenContainerProps extends ViewProps {
   children: React.ReactNode;
@@ -11,7 +13,13 @@ export default function ScreenContainer({ children, style, useSafeArea = false, 
   const Container = useSafeArea ? SafeAreaView : View;
 
   const content = scrollable ? (
-    <ScrollView contentContainerStyle={styles.innerScroll} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.innerScroll}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentInsetAdjustmentBehavior="automatic"
+    >
       {children}
     </ScrollView>
   ) : (
@@ -30,15 +38,15 @@ export default function ScreenContainer({ children, style, useSafeArea = false, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: color.bg.subtle,
   },
   inner: {
     flex: 1,
-    padding: 16,
+    padding: spacing[16],
     // Removed alignItems and justifyContent center to behave normally like standard screens
   },
   innerScroll: {
-    padding: 16,
+    padding: spacing[16],
     flexGrow: 1,
   }
 });

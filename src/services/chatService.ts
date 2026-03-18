@@ -1,6 +1,8 @@
 import {
   addDoc,
+  arrayRemove,
   collection,
+  deleteField,
   doc,
   getDoc,
   increment,
@@ -229,6 +231,17 @@ export const resetUnreadCount = async (chatId: string, userId: string): Promise<
   await updateDoc(doc(db, CHATS_COLLECTION, chatId), {
     [`unreadCounts.${userId}`]: 0,
   }).catch(() => {});
+};
+
+export const leaveChatRoom = async (chatId: string, userId: string): Promise<void> => {
+  if (!isFirebaseConfigured) return;
+
+  await updateDoc(doc(db, CHATS_COLLECTION, chatId), {
+    participantIds: arrayRemove(userId),
+    [`participants.${userId}`]: deleteField(),
+    [`unreadCounts.${userId}`]: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
 };
 
 /**

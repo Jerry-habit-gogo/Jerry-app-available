@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Post, PostFilterOptions, PostSortOption } from '../types';
+import { color, radius, spacing, typography } from '../theme/tokens';
 
 interface FilterChipOption<T extends string> {
   label: string;
@@ -131,41 +132,42 @@ export default function PostFilters({ category, filters, onChange }: PostFilters
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.sm,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: 12,
-    marginBottom: 12,
+    marginTop: spacing[12],
+    marginBottom: spacing[12],
   },
   row: {
-    marginBottom: 12,
+    marginBottom: spacing[12],
   },
   rowLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 8,
+    fontSize: typography.size.bodySmall,
+    fontWeight: typography.weight.bold,
+    color: color.text.secondary,
+    marginBottom: spacing[8],
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    backgroundColor: '#fff',
+    borderColor: color.line.default,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing[12],
+    paddingVertical: spacing[8],
+    marginRight: spacing[8],
+    backgroundColor: color.bg.subtle,
   },
   chipActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: color.brand.greenLight,
+    borderColor: color.brand.green,
   },
   chipText: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '600',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
+    fontWeight: typography.weight.medium,
   },
   chipTextActive: {
-    color: '#fff',
+    color: color.brand.greenDark,
+    fontWeight: typography.weight.semiBold,
   },
 });

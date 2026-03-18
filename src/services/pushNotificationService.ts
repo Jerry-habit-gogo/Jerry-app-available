@@ -1,16 +1,19 @@
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 
 const PUSH_TOKENS_COLLECTION = 'pushTokens';
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 /**
  * Request push permission, get the Expo push token, and persist it to Firestore.
  * Call this once after the user signs in.
  */
 export const registerPushToken = async (): Promise<void> => {
-  if (!isFirebaseConfigured || !auth.currentUser) return;
+  if (!isFirebaseConfigured || !auth.currentUser || isExpoGo) return;
+
+  const Notifications = await import('expo-notifications');
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {

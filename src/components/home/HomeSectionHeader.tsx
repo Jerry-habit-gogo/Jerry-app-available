@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { color, radius, spacing, typography } from '../../theme/tokens';
 
 interface Props {
   title: string;
@@ -33,28 +34,28 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: spacing[12],
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.sectionTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
   },
   subtitle: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#6B7280',
+    marginTop: spacing[4],
+    fontSize: typography.size.bodySmall,
+    color: color.text.tertiary,
     lineHeight: 18,
   },
   action: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    borderRadius: radius.full,
+    backgroundColor: color.bg.subtle,
   },
   actionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: typography.size.caption,
+    fontWeight: typography.weight.bold,
+    color: color.brand.green,
   },
 });

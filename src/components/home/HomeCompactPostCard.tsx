@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Post } from '../../types';
 import { PostStatusBadge } from '../PostStatusBadge';
 import { getPostStatus, isPostActive } from '../../constants/postStatus';
+import { color, radius, spacing, typography } from '../../theme/tokens';
 
 interface Props {
   post: Post;
@@ -48,12 +49,12 @@ export function HomeCompactPostCard({ post, onPress, compact = false }: Props) {
 const styles = StyleSheet.create({
   card: {
     width: 250,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#EEF2F7',
-    padding: 12,
-    marginRight: 12,
+    borderColor: color.line.subtle,
+    padding: spacing[12],
+    marginRight: spacing[12],
   },
   cardCompact: {
     width: 220,
@@ -61,9 +62,9 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 120,
-    borderRadius: 14,
-    marginBottom: 12,
-    backgroundColor: '#E5E7EB',
+    borderRadius: radius.md,
+    marginBottom: spacing[12],
+    backgroundColor: color.line.default,
   },
   imageCompact: {
     height: 104,
@@ -72,29 +73,29 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   header: {
-    gap: 8,
+    gap: spacing[8],
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     lineHeight: 20,
   },
   titleInactive: {
-    color: '#9CA3AF',
+    color: color.text.tertiary,
   },
   meta: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: typography.size.caption,
+    color: color.text.tertiary,
   },
   price: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#059669',
+    fontSize: typography.size.body,
+    fontWeight: typography.weight.bold,
+    color: color.state.success,
   },
   preview: {
-    fontSize: 13,
+    fontSize: typography.size.bodySmall,
     lineHeight: 18,
-    color: '#4B5563',
+    color: color.text.tertiary,
   },
 });

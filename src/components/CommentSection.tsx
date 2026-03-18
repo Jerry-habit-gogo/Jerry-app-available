@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
 import { Comment } from '../types';
+import { color, radius, shadow, spacing, typography } from '../theme/tokens';
 
 interface CommentSectionProps {
     comments: Comment[];
@@ -120,75 +121,68 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 20,
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        marginTop: spacing[20],
+        backgroundColor: color.bg.surface,
+        borderRadius: radius.xs,
+        padding: spacing[16],
+        ...shadow.soft,
     },
     headerTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        fontSize: typography.size.body,
+        fontWeight: typography.weight.bold,
+        color: color.text.primary,
+        marginBottom: spacing[16],
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        marginBottom: 20,
+        marginBottom: spacing[20],
     },
     input: {
         flex: 1,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        paddingTop: 12,
+        borderColor: color.line.default,
+        borderRadius: radius.xs,
+        padding: spacing[12],
+        paddingTop: spacing[12],
         minHeight: 40,
         maxHeight: 100,
-        backgroundColor: '#fafafa',
-        marginRight: 8,
+        backgroundColor: color.bg.subtle,
+        marginRight: spacing[8],
     },
     submitButton: {
-        backgroundColor: '#3b82f6',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: color.brand.green,
+        paddingHorizontal: spacing[16],
+        paddingVertical: spacing[12],
+        borderRadius: radius.xs,
         justifyContent: 'center',
     },
     submitButtonDisabled: {
-        backgroundColor: '#a5b4fc',
+        backgroundColor: color.neutral[300],
     },
     submitButtonText: {
-        color: 'white',
-        fontWeight: '600',
+        color: color.text.inverse,
+        fontWeight: typography.weight.semiBold,
     },
     listContainer: {
-        gap: 16,
+        gap: spacing[16],
     },
     disabledMessage: {
-        fontSize: 12,
-        color: '#9CA3AF',
+        fontSize: typography.size.caption,
+        color: color.text.tertiary,
         marginTop: -10,
-        marginBottom: 16,
+        marginBottom: spacing[16],
     },
     commentItem: {
-        paddingBottom: 16,
+        paddingBottom: spacing[16],
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: color.line.subtle,
     },
     commentHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: spacing[8],
     },
     authorInfo: {
         flexDirection: 'row',
@@ -198,48 +192,48 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
-        marginRight: 8,
+        marginRight: spacing[8],
     },
     placeholderAvatar: {
-        backgroundColor: '#10b981',
+        backgroundColor: color.state.success,
         justifyContent: 'center',
         alignItems: 'center',
     },
     placeholderAvatarText: {
-        color: '#ffffff',
-        fontWeight: 'bold',
+        color: color.text.inverse,
+        fontWeight: typography.weight.bold,
         fontSize: 10,
     },
     authorName: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#444',
+        fontSize: typography.size.bodySmall,
+        fontWeight: typography.weight.medium,
+        color: color.text.secondary,
     },
     timeText: {
-        fontSize: 11,
-        color: '#888',
+        fontSize: typography.size.micro,
+        color: color.text.tertiary,
     },
     commentContent: {
-        fontSize: 14,
-        color: '#333',
+        fontSize: typography.size.bodySmall,
+        color: color.text.primary,
         lineHeight: 20,
         marginLeft: 32,
     },
     commentHeaderRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: spacing[8],
     },
     deleteButton: {
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     deleteButtonText: {
-        fontSize: 12,
-        color: '#EF4444',
+        fontSize: typography.size.caption,
+        color: color.state.error,
     },
     reportButtonText: {
-        fontSize: 12,
-        color: '#9CA3AF',
+        fontSize: typography.size.caption,
+        color: color.text.tertiary,
     },
 });

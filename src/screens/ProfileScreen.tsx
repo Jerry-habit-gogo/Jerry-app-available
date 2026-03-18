@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   FlatList,
   Image,
@@ -11,43 +10,55 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/Button';
 import { PostCard } from '../components/PostCard';
 import ScreenContainer from '../components/ScreenContainer';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { fetchPostsByAuthor } from '../services/boardService';
-import { signOutCurrentUser } from '../services/authService';
 import { isFirebaseConfigured } from '../services/firebase';
 import { getUserProfile } from '../services/profileService';
 import { useUserStore } from '../store/userStore';
 import { Post } from '../types';
+import { color, radius, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { user, clearAuthState, setUser } = useUserStore();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { user, setUser } = useUserStore();
+  const userId = user?.id;
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   const loadProfileData = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setPosts([]);
+      setIsLoadingProfile(false);
+      setIsRefreshing(false);
       return;
     }
 
     setIsLoadingProfile(true);
     try {
       if (isFirebaseConfigured) {
-        const profile = await getUserProfile(user.id);
-        if (profile) {
+        const profile = await getUserProfile(userId);
+        if (
+          profile &&
+          (
+            user?.id !== profile.id ||
+            user.displayName !== profile.displayName ||
+            user.email !== profile.email ||
+            user.photoUrl !== profile.photoUrl ||
+            user.bio !== profile.bio
+          )
+        ) {
           setUser(profile);
         }
       }
 
-      const authoredPosts = await fetchPostsByAuthor(user.id);
+      const authoredPosts = await fetchPostsByAuthor(userId);
       setPosts(authoredPosts);
     } catch (error) {
       console.error('Failed to load profile', error);
@@ -55,30 +66,13 @@ export default function ProfileScreen() {
       setIsLoadingProfile(false);
       setIsRefreshing(false);
     }
-  }, [setUser, user]);
+  }, [setUser, user?.bio, user?.displayName, user?.email, user?.id, user?.photoUrl, userId]);
 
   useFocusEffect(
     useCallback(() => {
       loadProfileData();
     }, [loadProfileData])
   );
-
-  const handleLogout = async () => {
-    if (!isFirebaseConfigured) {
-      clearAuthState();
-      return;
-    }
-
-    setIsLoggingOut(true);
-    try {
-      await signOutCurrentUser();
-    } catch (error) {
-      console.error('Failed to sign out', error);
-      Alert.alert('오류', '로그아웃에 실패했습니다.');
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -108,19 +102,18 @@ export default function ProfileScreen() {
                 <Text style={styles.bio}>{user.bio || '아직 소개글이 없습니다.'}</Text>
               </View>
             </View>
-
-            <Button title="프로필 수정" onPress={() => navigation.navigate('EditProfile')} />
-            <Button title="저장한 게시글" onPress={() => navigation.navigate('SavedPosts')} variant="outline" />
-            <Button title="최근 본 게시글" onPress={() => navigation.navigate('RecentlyViewed')} variant="outline" />
-            <Button title="차단 목록" onPress={() => navigation.navigate('BlockedUsers')} variant="outline" />
-            <Button title="로그아웃" onPress={handleLogout} isLoading={isLoggingOut} variant="outline" />
+            <Button
+              title="설정"
+              onPress={() => navigation.navigate('ProfileSettings')}
+              rightIcon={<Ionicons name="chevron-forward" size={18} color={color.text.inverse} />}
+            />
           </View>
 
           <View style={styles.postsSection}>
             <Text style={styles.sectionTitle}>내가 작성한 글</Text>
             {isLoadingProfile ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#007AFF" />
+                <ActivityIndicator size="small" color={color.brand.green} />
               </View>
             ) : (
               <FlatList
@@ -152,11 +145,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 8, color: '#333' },
+  title: { fontSize: typography.size.screenTitle, fontWeight: typography.weight.bold, marginBottom: 8, color: color.text.primary },
   content: {
     marginTop: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.lg,
     padding: 20,
   },
   headerRow: {
@@ -171,29 +164,29 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: color.line.default,
   },
   avatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: color.brand.green,
   },
   avatarText: {
-    color: '#fff',
+    color: color.text.inverse,
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
   },
-  subtitle: { fontSize: 20, color: '#333', fontWeight: '700', marginBottom: 6 },
-  meta: { fontSize: 14, color: '#666', marginBottom: 8 },
-  bio: { fontSize: 14, color: '#444', lineHeight: 20 },
+  subtitle: { fontSize: typography.size.sectionTitle, color: color.text.primary, fontWeight: typography.weight.bold, marginBottom: 6 },
+  meta: { fontSize: typography.size.bodySmall, color: color.text.secondary, marginBottom: 8 },
+  bio: { fontSize: typography.size.bodySmall, color: color.text.secondary, lineHeight: 20 },
   postsSection: {
     flex: 1,
     marginTop: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: typography.size.sectionTitle,
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
     marginBottom: 12,
   },
   postsList: {
@@ -204,8 +197,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
     paddingVertical: 24,
     textAlign: 'center',
   },

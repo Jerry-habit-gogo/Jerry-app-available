@@ -59,6 +59,33 @@ const applySearchFilter = (posts: Post[], searchText?: string): Post[] => {
 const filterVisiblePosts = (posts: Post[]): Post[] =>
     posts.filter((post) => !isPostDeleted(post));
 
+const applyStructuredFilters = (posts: Post[], options: PostFilterOptions): Post[] =>
+    posts.filter((post) => {
+        if (options.category && post.category !== options.category) return false;
+        if (options.region && post.region !== options.region) return false;
+        if (options.jobType && post.jobType !== options.jobType) return false;
+        if (options.realEstateType && post.realEstateType !== options.realEstateType) return false;
+        if (options.marketplaceCondition && post.marketplaceCondition !== options.marketplaceCondition) return false;
+        return true;
+    });
+
+const sortPosts = (posts: Post[], sortBy?: PostFilterOptions['sortBy']): Post[] => {
+    const sorted = [...posts];
+
+    if (sortBy === 'price_low') {
+        sorted.sort((a, b) => (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER));
+        return sorted;
+    }
+
+    if (sortBy === 'price_high') {
+        sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+        return sorted;
+    }
+
+    sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return sorted;
+};
+
 // --- Image Upload ---
 
 /**
@@ -116,10 +143,10 @@ export const fetchPosts = async (
     lastVisible?: QueryDocumentSnapshot<DocumentData>
 ): Promise<{ posts: Post[]; lastVisible: QueryDocumentSnapshot<DocumentData> | undefined }> => {
     if (!isFirebaseConfigured) {
-        const categoryPosts = options.category
-            ? localPosts.filter((p) => p.category === options.category)
-            : localPosts;
-        const filtered = applySearchFilter(filterVisiblePosts(categoryPosts), options.searchText);
+        const filtered = applySearchFilter(
+            sortPosts(applyStructuredFilters(filterVisiblePosts(localPosts), options), options.sortBy),
+            options.searchText
+        );
         return { posts: filtered.slice(0, pageSize), lastVisible: undefined };
     }
 
@@ -142,14 +169,33 @@ export const fetchPosts = async (
     constraints.push(limit(pageSize));
     if (lastVisible) constraints.push(startAfter(lastVisible));
 
-    const q = query(collection(db, POSTS_COLLECTION), ...constraints);
-    const snapshot = await getDocs(q);
-    const posts = applySearchFilter(filterVisiblePosts(snapshot.docs.map(mapPostDoc)), options.searchText);
+    try {
+        const q = query(collection(db, POSTS_COLLECTION), ...constraints);
+        const snapshot = await getDocs(q);
+        const posts = applySearchFilter(filterVisiblePosts(snapshot.docs.map(mapPostDoc)), options.searchText);
 
-    return {
-        posts,
-        lastVisible: snapshot.docs[snapshot.docs.length - 1],
-    };
+        return {
+            posts,
+            lastVisible: snapshot.docs[snapshot.docs.length - 1],
+        };
+    } catch (error: any) {
+        if (error?.code !== 'failed-precondition') {
+            throw error;
+        }
+
+        console.warn('Falling back to client-side post filtering because a Firestore index is still building or missing.');
+
+        const fallbackSnapshot = await getDocs(query(collection(db, POSTS_COLLECTION), limit(Math.max(pageSize * 8, 80))));
+        const filteredPosts = applySearchFilter(
+            sortPosts(applyStructuredFilters(filterVisiblePosts(fallbackSnapshot.docs.map(mapPostDoc)), options), options.sortBy),
+            options.searchText
+        );
+
+        return {
+            posts: filteredPosts.slice(0, pageSize),
+            lastVisible: undefined,
+        };
+    }
 };
 
 export const fetchPostsByCategory = async (

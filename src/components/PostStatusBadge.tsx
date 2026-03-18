@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { POST_STATUS_LABELS, POST_STATUS_STYLES } from '../constants/postStatus';
 import { PostStatus } from '../types';
+import { radius, typography } from '../theme/tokens';
 
 interface Props {
   status: PostStatus;
@@ -26,10 +27,10 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radius.xs,
   },
   text: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
   },
 });

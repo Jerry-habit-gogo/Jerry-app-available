@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,16 +12,7 @@ import { subscribeToUnreadCount } from './src/services/notificationService';
 import { registerPushToken } from './src/services/pushNotificationService';
 import { useUserStore } from './src/store/userStore';
 
-// Show notifications while the app is in the foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 function AuthBootstrap() {
   const {
@@ -53,7 +44,9 @@ function AuthBootstrap() {
         fetchBlockedUserIds().then(setBlockedUserIds).catch(() => {});
         unsubNotifications = subscribeToUnreadCount(user.id, setUnreadNotificationCount);
         unsubChats = subscribeToUnreadChatCount(user.id, setUnreadChatCount);
-        registerPushToken().catch(() => {});
+        if (!isExpoGo) {
+          registerPushToken().catch(() => {});
+        }
       } else {
         setBlockedUserIds([]);
         setUnreadNotificationCount(0);
@@ -70,29 +63,57 @@ function AuthBootstrap() {
 
   // Deep-link handler: navigate when user taps a push notification
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
-      if (!navigationRef.isReady()) return;
+    if (isExpoGo) {
+      return;
+    }
 
-      const data = response.notification.request.content.data as Record<string, unknown>;
-      const type = data.type as string | undefined;
+    let isActive = true;
+    let removeSubscription: (() => void) | null = null;
 
-      if (type === 'chat_message') {
-        navigationRef.navigate('Chat');
-      } else if ((type === 'comment' || type === 'like') && data.postId) {
-        try {
-          const post = await fetchPostById(data.postId as string);
-          if (post) {
-            navigationRef.navigate('PostDetail', { post });
+    void (async () => {
+      const Notifications = await import('expo-notifications');
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
+      if (!isActive) return;
+
+      const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
+        if (!navigationRef.isReady()) return;
+
+        const data = response.notification.request.content.data as Record<string, unknown>;
+        const type = data.type as string | undefined;
+
+        if (type === 'chat_message') {
+          navigationRef.navigate('Chat');
+        } else if ((type === 'comment' || type === 'like') && data.postId) {
+          try {
+            const post = await fetchPostById(data.postId as string);
+            if (post) {
+              navigationRef.navigate('PostDetail', { post });
+            }
+          } catch {
+            // Fallback: user can check notifications tab
           }
-        } catch {
-          // Fallback: user can check notifications tab
+        } else if (type === 'announcement') {
+          navigationRef.navigate('Announcements');
         }
-      } else if (type === 'announcement') {
-        navigationRef.navigate('Announcements');
-      }
-    });
+      });
 
-    return () => subscription.remove();
+      removeSubscription = () => subscription.remove();
+    })();
+
+    return () => {
+      isActive = false;
+      removeSubscription?.();
+    };
   }, []);
 
   if (isLoading) {

@@ -1,16 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppNotification } from '../types';
+import { color, radius, spacing, typography } from '../theme/tokens';
 
 // Type-specific icon + accent color
 const TYPE_CONFIG: Record<
   AppNotification['type'],
   { icon: string; color: string; bg: string }
 > = {
-  chat_message: { icon: '💬', color: '#2563EB', bg: '#EFF6FF' },
-  comment:      { icon: '🗨️',  color: '#059669', bg: '#ECFDF5' },
-  like:         { icon: '❤️',  color: '#DC2626', bg: '#FEF2F2' },
-  announcement: { icon: '📢', color: '#D97706', bg: '#FFFBEB' },
+  chat_message: { icon: 'chatbubble', color: color.brand.blue,      bg: color.brand.blueLight },
+  comment:      { icon: 'chatbox-ellipses',  color: color.state.success,  bg: color.state.successLight },
+  like:         { icon: 'heart',  color: color.state.error,    bg: color.state.errorLight },
+  announcement: { icon: 'megaphone', color: color.state.warning,  bg: color.state.warningLight },
 };
 
 const formatTimeAgo = (dateStr: string): string => {
@@ -26,9 +28,10 @@ const formatTimeAgo = (dateStr: string): string => {
 interface NotificationItemProps {
   notification: AppNotification;
   onPress: (notification: AppNotification) => void;
+  onDelete?: (notification: AppNotification) => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress }) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress, onDelete }) => {
   const cfg = TYPE_CONFIG[notification.type];
   const isUnread = !notification.read;
 
@@ -41,7 +44,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       {isUnread && <View style={[styles.leftBar, { backgroundColor: cfg.color }]} />}
 
       <View style={[styles.iconWrap, { backgroundColor: cfg.bg }]}>
-        <Text style={styles.iconText}>{cfg.icon}</Text>
+        <Ionicons name={cfg.icon as any} size={22} color={cfg.color} />
       </View>
 
       <View style={styles.body}>
@@ -57,7 +60,18 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
         <Text style={styles.time}>{formatTimeAgo(notification.createdAt)}</Text>
       </View>
 
-      {isUnread && <View style={[styles.dot, { backgroundColor: cfg.color }]} />}
+      <View style={styles.trailing}>
+        {isUnread && <View style={[styles.dot, { backgroundColor: cfg.color }]} />}
+        {onDelete ? (
+          <TouchableOpacity
+            onPress={() => onDelete(notification)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.deleteButton}
+          >
+            <Text style={styles.deleteText}>삭제</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -66,15 +80,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.md,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginBottom: 8,
+    marginBottom: spacing[8],
     overflow: 'hidden',
   },
   unread: {
-    backgroundColor: '#F8FAFF',
+    backgroundColor: color.brand.blueLight,
   },
   leftBar: {
     position: 'absolute',
@@ -87,43 +101,53 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 42,
     height: 42,
-    borderRadius: 13,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing[12],
     flexShrink: 0,
-  },
-  iconText: {
-    fontSize: 20,
   },
   body: {
     flex: 1,
     gap: 2,
   },
   title: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
+    fontSize: typography.size.bodySmall,
+    color: color.text.secondary,
+    fontWeight: typography.weight.medium,
   },
   titleUnread: {
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: typography.weight.bold,
+    color: color.text.primary,
   },
   bodyText: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: typography.size.bodySmall,
+    color: color.text.tertiary,
     lineHeight: 18,
   },
   time: {
-    fontSize: 11,
-    color: '#9CA3AF',
+    fontSize: typography.size.micro,
+    color: color.text.tertiary,
     marginTop: 2,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginLeft: 10,
     flexShrink: 0,
+  },
+  trailing: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    marginLeft: 10,
+  },
+  deleteButton: {
+    paddingVertical: 2,
+  },
+  deleteText: {
+    fontSize: typography.size.micro,
+    color: color.text.tertiary,
+    fontWeight: typography.weight.medium,
   },
 });

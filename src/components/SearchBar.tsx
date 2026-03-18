@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { color, radius, spacing, typography } from '../theme/tokens';
 
 interface SearchBarProps {
   value: string;
@@ -14,12 +15,13 @@ export default function SearchBar({
 }: SearchBarProps) {
   return (
     <View style={styles.container}>
+      <Text style={styles.icon}>🔍</Text>
       <TextInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={color.text.tertiary}
         autoCapitalize="none"
       />
     </View>
@@ -28,14 +30,22 @@ export default function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.bg.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.line.default,
+    paddingHorizontal: spacing[16],
+  },
+  icon: {
+    fontSize: 16,
+    marginRight: 10,
   },
   input: {
-    minHeight: 42,
-    fontSize: 15,
-    color: '#111827',
+    flex: 1,
+    height: 52,
+    fontSize: typography.size.body,
+    color: color.text.primary,
   },
 });
