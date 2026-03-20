@@ -61,6 +61,7 @@ const filterVisiblePosts = (posts: Post[]): Post[] =>
 
 const applyStructuredFilters = (posts: Post[], options: PostFilterOptions): Post[] =>
     posts.filter((post) => {
+        if (options.categories?.length && !options.categories.includes(post.category as 'jobs' | 'real_estate' | 'marketplace')) return false;
         if (options.category && post.category !== options.category) return false;
         if (options.region && post.region !== options.region) return false;
         if (options.jobType && post.jobType !== options.jobType) return false;
@@ -152,7 +153,11 @@ export const fetchPosts = async (
 
     const constraints: Parameters<typeof query>[1][] = [];
 
-    if (options.category) constraints.push(where('category', '==', options.category));
+    if (options.categories?.length) {
+        constraints.push(where('category', 'in', options.categories));
+    } else if (options.category) {
+        constraints.push(where('category', '==', options.category));
+    }
     if (options.region) constraints.push(where('region', '==', options.region));
     if (options.jobType) constraints.push(where('jobType', '==', options.jobType));
     if (options.realEstateType) constraints.push(where('realEstateType', '==', options.realEstateType));

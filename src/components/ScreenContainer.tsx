@@ -3,14 +3,18 @@ import { View, StyleSheet, ViewProps, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { color, spacing } from '../theme/tokens';
 
+type Edge = 'top' | 'bottom' | 'left' | 'right';
+
 interface ScreenContainerProps extends ViewProps {
   children: React.ReactNode;
   useSafeArea?: boolean;
   scrollable?: boolean;
+  edges?: Edge[];
 }
 
-export default function ScreenContainer({ children, style, useSafeArea = false, scrollable = false, ...props }: ScreenContainerProps) {
+export default function ScreenContainer({ children, style, useSafeArea = false, scrollable = false, edges, ...props }: ScreenContainerProps) {
   const Container = useSafeArea ? SafeAreaView : View;
+  const safeAreaProps = useSafeArea && edges ? { edges } : {};
 
   const content = scrollable ? (
     <ScrollView
@@ -29,7 +33,7 @@ export default function ScreenContainer({ children, style, useSafeArea = false, 
   );
 
   return (
-    <Container style={[styles.container, style]} {...props}>
+    <Container style={[styles.container, style]} {...safeAreaProps} {...props}>
       {content}
     </Container>
   );

@@ -1,6 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  PanResponder,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,13 +11,13 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import { SideMenuDrawer, SideMenuItem } from '../components/SideMenuDrawer';
 import { HomeSectionHeader } from '../components/home/HomeSectionHeader';
-import { HomeCategoryCard } from '../components/home/HomeCategoryCard';
 import { HomeCompactPostCard } from '../components/home/HomeCompactPostCard';
 import { HomeContinueCard } from '../components/home/HomeContinueCard';
 import { HomeAdSlot } from '../components/home/HomeAdSlot';
@@ -30,22 +32,6 @@ import { color, radius, typography } from '../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const QUICK_ACCESS_ITEMS = [
-  { key: 'jobs', label: 'Jobs', description: '일자리와 채용 공고를 확인하세요', icon: '💼', accent: color.brand.blueLight },
-  { key: 'real_estate', label: 'Real Estate', description: '집, 방, 렌트 정보를 살펴보세요', icon: '🏠', accent: color.brand.greenLight },
-  { key: 'marketplace', label: 'Marketplace', description: '중고 물품과 생활 거래를 찾으세요', icon: '🛍️', accent: color.brand.sandLight },
-  { key: 'news', label: 'News', description: '지역 소식과 업데이트를 빠르게 확인하세요', icon: '📰', accent: color.state.errorLight },
-  { key: 'announcements', label: 'Announcements', description: '공지와 필수 안내를 한눈에 확인하세요', icon: '📌', accent: color.state.warningLight },
-] as const;
-
-const categoryTitles: Record<string, string> = {
-  jobs: '구인구직',
-  real_estate: '부동산',
-  marketplace: '중고장터',
-  news: '뉴스',
-  announcements: '공지사항',
-};
-
 const emptyDashboardData: HomeDashboardData = {
   latestJobs: [],
   latestRealEstate: [],
@@ -59,11 +45,24 @@ const emptyDashboardData: HomeDashboardData = {
 
 export default function HomeDashboardScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const { user, blockedUserIds, unreadNotificationCount } = useUserStore();
   const [dashboard, setDashboard] = useState<HomeDashboardData>(emptyDashboardData);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const swipeResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, { dx, dy }) => dx > 8 && Math.abs(dy) < 50,
+      onPanResponderRelease: (_, { dx, vx }) => {
+        if (dx > 50 || vx > 0.5) {
+          setMenuVisible(true);
+        }
+      },
+    })
+  ).current;
 
   const removeBlocked = useCallback(
     (posts: Post[]) =>
@@ -100,17 +99,6 @@ export default function HomeDashboardScreen() {
     }, [loadDashboard])
   );
 
-  const openCategory = (category: Post['category']) => {
-    navigation.navigate('Browse', {
-      title: categoryTitles[category],
-      category,
-      initialFilters: {
-        category,
-        sortBy: 'latest',
-      },
-    });
-  };
-
   const openPost = (post: Post) => navigation.navigate('PostDetail', { post });
 
   const openSection = (title: string, category?: Post['category']) => {
@@ -124,11 +112,6 @@ export default function HomeDashboardScreen() {
     });
   };
 
-  const recommendationSubtitle = useMemo(() => {
-    if (!user) return '로그인하면 최근 활동을 바탕으로 더 맞는 추천을 보여드립니다.';
-    return '최근 본 글과 저장한 글을 바탕으로 맞춤 추천을 모았습니다.';
-  }, [user]);
-
   const handleLoginPrompt = () => navigation.navigate('Auth');
 
   const menuItems: SideMenuItem[] = [
@@ -141,7 +124,41 @@ export default function HomeDashboardScreen() {
   ];
 
   return (
-    <ScreenContainer useSafeArea scrollable={false}>
+    <ScreenContainer useSafeArea edges={['bottom']} scrollable={false}>
+      <View style={styles.swipeZone} {...swipeResponder.panHandlers} />
+      {/* 고정 헤더 */}
+      <View style={[styles.appHeader, { paddingTop: insets.top + 8, marginHorizontal: -16, marginTop: -16 }]}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => setMenuVisible(true)}
+          activeOpacity={0.82}
+        >
+          <BlurView intensity={80} tint="light" style={styles.glassBg} />
+          <Ionicons name="menu-outline" size={24} color={color.text.primary} />
+        </TouchableOpacity>
+
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+
+        <View style={styles.appHeaderRight}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Notifications')}
+            activeOpacity={0.82}
+          >
+            <BlurView intensity={80} tint="light" style={styles.glassBg} />
+            <Ionicons name="notifications-outline" size={22} color={color.text.primary} />
+            {unreadNotificationCount > 0 ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.headerDivider} />
+
       {loading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={color.brand.green} />
@@ -161,35 +178,6 @@ export default function HomeDashboardScreen() {
             />
           }
         >
-          <View style={styles.appHeader}>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => setMenuVisible(true)}
-              activeOpacity={0.82}
-            >
-              <BlurView intensity={80} tint="light" style={styles.glassBg} />
-              <Ionicons name="menu-outline" size={24} color={color.text.primary} />
-            </TouchableOpacity>
-
-            <View style={styles.appHeaderRight}>
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => navigation.navigate('Notifications')}
-                activeOpacity={0.82}
-              >
-                <BlurView intensity={80} tint="light" style={styles.glassBg} />
-                <Ionicons name="notifications-outline" size={22} color={color.text.primary} />
-                {unreadNotificationCount > 0 ? (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </TouchableOpacity>
-            </View>
-          </View>
-
           <View style={styles.hero}>
             <View style={styles.heroGlow} />
             <View style={styles.heroCopy}>
@@ -241,22 +229,6 @@ export default function HomeDashboardScreen() {
                 <Text style={styles.emptyCardText}>중요 공지가 올라오면 이곳에서 먼저 보여드립니다.</Text>
               </View>
             )}
-          </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="Quick Access" subtitle="자주 찾는 서비스를 바로 열어보세요." />
-            <View style={styles.quickGrid}>
-              {QUICK_ACCESS_ITEMS.map((item) => (
-                <HomeCategoryCard
-                  key={item.key}
-                  label={item.label}
-                  description={item.description}
-                  icon={item.icon}
-                  accent={item.accent}
-                  onPress={() => openCategory(item.key)}
-                />
-              ))}
-            </View>
           </View>
 
           <View style={styles.section}>
@@ -320,59 +292,9 @@ export default function HomeDashboardScreen() {
             )}
           </View>
 
-          <View style={styles.section}>
-            <HomeSectionHeader title="Recommended for You" subtitle={recommendationSubtitle} />
-            {!user ? (
-              <TouchableOpacity style={styles.loginPrompt} onPress={handleLoginPrompt} activeOpacity={0.85}>
-                <Text style={styles.loginPromptTitle}>로그인하면 맞춤 추천이 활성화됩니다</Text>
-                <Text style={styles.loginPromptText}>
-                  최근 본 글과 저장한 글을 바탕으로 홈 추천을 더 정확하게 구성합니다.
-                </Text>
-              </TouchableOpacity>
-            ) : dashboard.recommendations.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {dashboard.recommendations.map((post) => (
-                  <HomeCompactPostCard key={post.id} post={post} onPress={openPost} />
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>추천을 준비하는 중입니다</Text>
-                <Text style={styles.emptyCardText}>
-                  글을 둘러보거나 저장하면 홈 추천이 더 정교해집니다.
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="Latest Jobs" actionLabel="더보기" onPressAction={() => openSection('구인구직', 'jobs')} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {dashboard.latestJobs.map((post) => (
-                <HomeCompactPostCard key={post.id} post={post} onPress={openPost} compact />
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="Latest Real Estate" actionLabel="더보기" onPressAction={() => openSection('부동산', 'real_estate')} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {dashboard.latestRealEstate.map((post) => (
-                <HomeCompactPostCard key={post.id} post={post} onPress={openPost} compact />
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.section}>
-            <HomeSectionHeader title="Popular Marketplace" actionLabel="더보기" onPressAction={() => openSection('중고장터', 'marketplace')} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {dashboard.popularMarketplace.map((post) => (
-                <HomeCompactPostCard key={post.id} post={post} onPress={openPost} compact />
-              ))}
-            </ScrollView>
-          </View>
         </ScrollView>
       )}
+
       <SideMenuDrawer
         visible={menuVisible}
         title="메뉴"
@@ -384,6 +306,14 @@ export default function HomeDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  swipeZone: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 24,
+    zIndex: 10,
+  },
   loadingState: {
     flex: 1,
     justifyContent: 'center',
@@ -396,7 +326,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: color.bg.surface,
+  },
+  headerLogo: {
+    height: 28,
+    width: 100,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: color.line.default,
+    marginHorizontal: 0,
   },
   appHeaderRight: {
     flexDirection: 'row',
@@ -473,11 +414,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 28,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
   },
   continueRow: {
     flexDirection: 'row',

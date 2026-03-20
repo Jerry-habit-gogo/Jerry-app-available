@@ -3,7 +3,7 @@ import { fetchRecentlyViewed, fetchSavedPosts, PostWithMeta } from './userConten
 import { Post } from '../types';
 import { isPostDeleted } from '../constants/postStatus';
 
-export const HOME_REGION_OPTIONS = ['All', 'Sydney', 'Strathfield', 'Chatswood'] as const;
+export const HOME_REGION_OPTIONS = ['All', '시드니', '멜버른', '브리즈번', '골드코스트', '퍼스'] as const;
 export type HomeRegion = (typeof HOME_REGION_OPTIONS)[number];
 
 export interface HomeDashboardData {

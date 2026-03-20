@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Post, PostFilterOptions, PostSortOption } from '../types';
+import { Post, PostFilterOptions } from '../types';
 import { color, radius, spacing, typography } from '../theme/tokens';
 
 interface FilterChipOption<T extends string> {
@@ -14,17 +14,24 @@ interface PostFiltersProps {
   onChange: (nextFilters: PostFilterOptions) => void;
 }
 
-const SORT_OPTIONS: FilterChipOption<PostSortOption>[] = [
-  { label: '최신순', value: 'latest' },
-  { label: '낮은 가격순', value: 'price_low' },
-  { label: '높은 가격순', value: 'price_high' },
+const SEARCH_CATEGORY_OPTIONS: Array<{ label: string; value: 'jobs' | 'real_estate' | 'marketplace' }> = [
+  { label: '구인구직', value: 'jobs' },
+  { label: '부동산', value: 'real_estate' },
+  { label: '중고장터', value: 'marketplace' },
+];
+const SEARCH_CATEGORY_VALUES: Array<'jobs' | 'real_estate' | 'marketplace'> = [
+  'jobs',
+  'real_estate',
+  'marketplace',
 ];
 
 const REGION_OPTIONS: FilterChipOption<string>[] = [
   { label: '전체 지역', value: '' },
-  { label: 'Sydney', value: 'Sydney' },
-  { label: 'Strathfield', value: 'Strathfield' },
-  { label: 'Chatswood', value: 'Chatswood' },
+  { label: '시드니', value: '시드니' },
+  { label: '멜버른', value: '멜버른' },
+  { label: '브리즈번', value: '브리즈번' },
+  { label: '골드코스트', value: '골드코스트' },
+  { label: '퍼스', value: '퍼스' },
 ];
 
 const JOB_TYPE_OPTIONS: FilterChipOption<NonNullable<Post['jobType']>>[] = [
@@ -84,14 +91,50 @@ function FilterRow<T extends string>({
 }
 
 export default function PostFilters({ category, filters, onChange }: PostFiltersProps) {
+  const selectedCategories =
+    filters.categories && filters.categories.length > 0
+      ? filters.categories
+      : SEARCH_CATEGORY_VALUES;
+  const isAllSelected = SEARCH_CATEGORY_VALUES.every((value) => selectedCategories.includes(value));
+
+  const toggleCategory = (value: 'jobs' | 'real_estate' | 'marketplace') => {
+    onChange({ ...filters, categories: [value] });
+  };
+
   return (
     <View style={styles.container}>
-      <FilterRow
-        label="정렬"
-        selectedValue={filters.sortBy || 'latest'}
-        options={SORT_OPTIONS}
-        onSelect={(value) => onChange({ ...filters, sortBy: value || 'latest' })}
-      />
+      {!category && (
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>카테고리</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity
+              key="search-category-all"
+              style={[styles.chip, isAllSelected && styles.chipActive]}
+              onPress={() => onChange({ ...filters, categories: SEARCH_CATEGORY_VALUES })}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.chipText, isAllSelected && styles.chipTextActive]}>
+                전체
+              </Text>
+            </TouchableOpacity>
+            {SEARCH_CATEGORY_OPTIONS.map((option) => {
+              const isActive = !isAllSelected && selectedCategories.includes(option.value);
+              return (
+                <TouchableOpacity
+                  key={`search-category-${option.value}`}
+                  style={[styles.chip, isActive && styles.chipActive]}
+                  onPress={() => toggleCategory(option.value)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       <FilterRow
         label="지역"

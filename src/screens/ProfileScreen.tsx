@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -86,15 +87,25 @@ export default function ProfileScreen() {
         <>
           <View style={styles.content}>
             <View style={styles.headerRow}>
-              {user.photoUrl ? (
-                <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                  <Text style={styles.avatarText}>
-                    {(user.displayName || user.email || 'J').charAt(0).toUpperCase()}
-                  </Text>
+              <Pressable
+                onPress={() => navigation.navigate('EditProfile')}
+                style={styles.avatarPressable}
+                accessibilityRole="button"
+                accessibilityLabel="프로필 사진 변경"
+              >
+                {user.photoUrl ? (
+                  <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarText}>
+                      {(user.displayName || user.email || 'J').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.avatarEditBadge}>
+                  <Ionicons name="camera" size={13} color={color.text.inverse} />
                 </View>
-              )}
+              </Pressable>
 
               <View style={styles.headerMeta}>
                 <Text style={styles.subtitle}>{user.displayName || '회원'}</Text>
@@ -160,6 +171,9 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
+  avatarPressable: {
+    position: 'relative',
+  },
   avatar: {
     width: 76,
     height: 76,
@@ -175,6 +189,19 @@ const styles = StyleSheet.create({
     color: color.text.inverse,
     fontSize: 28,
     fontWeight: typography.weight.bold,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.brand.green,
+    borderWidth: 2,
+    borderColor: color.bg.surface,
   },
   subtitle: { fontSize: typography.size.sectionTitle, color: color.text.primary, fontWeight: typography.weight.bold, marginBottom: 6 },
   meta: { fontSize: typography.size.bodySmall, color: color.text.secondary, marginBottom: 8 },

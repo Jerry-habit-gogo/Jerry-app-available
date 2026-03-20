@@ -13,6 +13,12 @@ import { useUserStore } from '../store/userStore';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { color, radius, shadow, typography } from '../theme/tokens';
 
+const SEARCH_DEFAULT_CATEGORIES: Array<'jobs' | 'real_estate' | 'marketplace'> = [
+    'jobs',
+    'real_estate',
+    'marketplace',
+];
+
 interface BoardListScreenProps {
     category?: 'jobs' | 'real_estate' | 'marketplace' | 'news' | 'announcements';
     title?: string;
@@ -40,6 +46,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
     const [pinnedPostIds, setPinnedPostIds] = useState<Set<string>>(new Set());
     const [filters, setFilters] = useState<PostFilterOptions>({
         category,
+        categories: !category ? SEARCH_DEFAULT_CATEGORIES : undefined,
         sortBy: 'latest',
         ...initialFilters,
     });
@@ -47,6 +54,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
     useEffect(() => {
         setFilters({
             category,
+            categories: !category ? (initialFilters?.categories || SEARCH_DEFAULT_CATEGORIES) : undefined,
             searchText: initialFilters?.searchText,
             sortBy: initialFilters?.sortBy || 'latest',
             region: initialFilters?.region,
@@ -73,7 +81,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
         try {
             const shouldLoadPinned = category === 'announcements';
             const [{ posts: fetchedPosts, lastVisible: newLastVisible }, pinned] = await Promise.all([
-                fetchPosts({ ...filters, category }, PAGE_SIZE),
+                fetchPosts(category ? { ...filters, category } : filters, PAGE_SIZE),
                 shouldLoadPinned ? fetchPinnedPosts() : Promise.resolve([]),
             ]);
             const ids = new Set(pinned.map((p) => p.id));
@@ -92,7 +100,7 @@ export const BoardListScreen: React.FC<BoardListScreenProps> = ({
         setLoadingMore(true);
         try {
             const { posts: morePosts, lastVisible: newLastVisible } = await fetchPosts(
-                { ...filters, category },
+                category ? { ...filters, category } : filters,
                 PAGE_SIZE,
                 lastVisible
             );

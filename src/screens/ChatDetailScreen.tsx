@@ -110,7 +110,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.keyboardContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'position'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       {/* 상단 헤더 */}
@@ -127,7 +127,7 @@ export default function ChatDetailScreen({ route, navigation }: Props) {
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         renderItem={({ item }) => {
           const isMine = item.senderId === user?.id;
           return (

@@ -25,7 +25,7 @@ import { color, radius, typography, shadow, inputHeight } from '../theme/tokens'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePost'>;
 
-const REGION_OPTIONS = ['Sydney', 'Melbourne', 'Brisbane', 'Gold Coast'] as const;
+const REGION_OPTIONS = ['시드니', '멜버른', '브리즈번', '골드코스트', '퍼스'] as const;
 
 const CATEGORY_LABELS: Record<Post['category'], string> = {
     jobs: '구인구직',

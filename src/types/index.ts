@@ -36,6 +36,7 @@ export type PostSortOption = 'latest' | 'price_low' | 'price_high';
 
 export interface PostFilterOptions {
   category?: Post['category'];
+  categories?: Array<'jobs' | 'real_estate' | 'marketplace'>;
   searchText?: string;
   sortBy?: PostSortOption;
   region?: string;

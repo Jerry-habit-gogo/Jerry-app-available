@@ -37,7 +37,7 @@ export default function RecentlyViewedScreen() {
       if (!silent) setLoading(true);
       try {
         const data = await fetchRecentlyViewed(user.id);
-        setItems(data);
+        setItems(data.filter((item) => !item.deleted));
         initialLoadedRef.current = true;
       } catch (e) {
         console.error('Failed to load recently viewed', e);
